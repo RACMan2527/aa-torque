@@ -26,7 +26,7 @@ import com.github.anastr.speedviewlib.components.indicators.TriangleIndicator
 import timber.log.Timber
 import java.util.Locale
 
-const val NUM_TICKS = 9
+const val NUM_TICKS = 5
 val MIN_MAX_DEFAULT = Pair(0f, 100f)
 class TorqueGauge : Fragment() {
 
