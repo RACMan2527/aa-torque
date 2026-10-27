@@ -1,5 +1,7 @@
 name: ci
+
 on: [push]
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -24,7 +26,7 @@ jobs:
       - name: Build Release apk
         run: echo "" >> ./local.properties && ./gradlew lintRelease
 
-build_lab:
+  build_lab:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/aa-torque-lab'
     steps:
@@ -48,7 +50,7 @@ build_lab:
           name: aa-torque-lab-apk
           path: app/build/outputs/apk/lab/*.apk
           if-no-files-found: error
-  
+
   build_deploy:
     runs-on: ubuntu-latest
     permissions:
@@ -95,16 +97,16 @@ build_lab:
         if: github.repository == 'agronick/aa-torque'
         run: >
           echo "" >> ./local.properties &&
-          ./gradlew assembleRelease 
-          -Pandroid.injected.signing.store.file=$HOME/debug.keystore 
-          -Pandroid.injected.signing.key.alias=androiddebugkey 
-          -Pandroid.injected.signing.store.password=android 
+          ./gradlew assembleRelease
+          -Pandroid.injected.signing.store.file=$HOME/debug.keystore
+          -Pandroid.injected.signing.key.alias=androiddebugkey
+          -Pandroid.injected.signing.store.password=android
           -Pandroid.injected.signing.key.password=android
 
       - name: Build Release apk for forked repos
         if: github.repository != 'agronick/aa-torque'
         run: >
-           echo "" >> ./local.properties && ./gradlew assembleRelease 
+          echo "" >> ./local.properties && ./gradlew assembleRelease
 
       - name: Rename release
         run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/aa-torque.apk
