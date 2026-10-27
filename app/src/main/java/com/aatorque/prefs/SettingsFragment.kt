@@ -36,6 +36,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var opacityPref: SeekBarPreference
     lateinit var darkenArtPref: SeekBarPreference
     lateinit var blurArtPref: SeekBarPreference
+    lateinit var refreshIntervalPref: SeekBarPreference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -151,8 +152,18 @@ class SettingsFragment : PreferenceFragmentCompat() {
             }
             return@setOnPreferenceChangeListener true
         }
+
+        refreshIntervalPref.setOnPreferenceChangeListener { _, newValue ->
+            updateDatastorePref {
+                it.setRefreshIntervalMs(newValue as Int)
+            }
+            return@setOnPreferenceChangeListener true
+        }    
+        
         blurArtPref.isVisible = Build.VERSION.SDK_INT >= 31
 
+
+        
         numScreensPref.setOnBindEditTextListener {
             it.inputType = InputType.TYPE_CLASS_NUMBER
         }
@@ -169,6 +180,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 opacityPref.value = if (it.opacity == 0) 100 else it.opacity
                 blurArtPref.value = it.blurArt
                 darkenArtPref.value = it.darkenArt
+                refreshIntervalPref.value =
+                    if (it.refreshIntervalMs == 0) 300 else it.refreshIntervalMs
             }
         }
         lifecycleScope.launch {
