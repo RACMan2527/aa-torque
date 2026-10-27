@@ -24,6 +24,31 @@ jobs:
       - name: Build Release apk
         run: echo "" >> ./local.properties && ./gradlew lintRelease
 
+build_lab:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/aa-torque-lab'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '19'
+
+      - name: Build Lab APK
+        run: |
+          echo "" >> ./local.properties
+          ./gradlew assembleLab
+
+      - name: Upload Lab APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aa-torque-lab-apk
+          path: app/build/outputs/apk/lab/*.apk
+          if-no-files-found: error
+  
   build_deploy:
     runs-on: ubuntu-latest
     permissions:
