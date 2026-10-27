@@ -15,6 +15,7 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import com.aatorque.datastore.UserPreference
 import com.aatorque.stats.NotiService
+import com.aatorque.stats.TorqueRefresher
 import com.aatorque.stats.R
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -180,8 +181,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 opacityPref.value = if (it.opacity == 0) 100 else it.opacity
                 blurArtPref.value = it.blurArt
                 darkenArtPref.value = it.darkenArt
-                refreshIntervalPref.value =
+                val refreshInterval =
                     if (it.refreshIntervalMs == 0) 300 else it.refreshIntervalMs
+                
+                refreshIntervalPref.value = refreshInterval
+                TorqueRefresher.REFRESH_INTERVAL = refreshInterval.toLong()
             }
         }
         lifecycleScope.launch {
