@@ -59,6 +59,7 @@ android {
             signingConfig signingConfigs.debug
         }
         lab {
+        matchingFallbacks = ['debug']
         debuggable true
         minifyEnabled false
         applicationIdSuffix ".lab"
