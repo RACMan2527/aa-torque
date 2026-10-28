@@ -15,6 +15,7 @@ import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import com.aatorque.datastore.UserPreference
 import com.aatorque.stats.NotiService
+import com.aatorque.stats.TorqueRefresher
 import com.aatorque.stats.R
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var opacityPref: SeekBarPreference
     lateinit var darkenArtPref: SeekBarPreference
     lateinit var blurArtPref: SeekBarPreference
+    lateinit var refreshIntervalPref: SeekBarPreference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,6 +53,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         opacityPref = findPreference("gaugeOpacity")!!
         blurArtPref = findPreference("blurArtwork")!!
         darkenArtPref = findPreference("darkenArtwork")!!
+        refreshIntervalPref = findPreference("refreshIntervalMs")!!
         themePref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         fontPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         backgroundPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
@@ -153,6 +156,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
         blurArtPref.isVisible = Build.VERSION.SDK_INT >= 31
 
+        refreshIntervalPref.setOnPreferenceChangeListener { _, newValue ->
+            updateDatastorePref {
+                it.setRefreshIntervalMs(newValue as Int)
+            }
+            return@setOnPreferenceChangeListener true
+        }
+        
         numScreensPref.setOnBindEditTextListener {
             it.inputType = InputType.TYPE_CLASS_NUMBER
         }
@@ -169,6 +179,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 opacityPref.value = if (it.opacity == 0) 100 else it.opacity
                 blurArtPref.value = it.blurArt
                 darkenArtPref.value = it.darkenArt
+                val refreshInterval =
+                    if (it.refreshIntervalMs == 0) 300 else it.refreshIntervalMs
+                
+                refreshIntervalPref.value = refreshInterval
+                TorqueRefresher.REFRESH_INTERVAL = refreshInterval.toLong()
             }
         }
         lifecycleScope.launch {
