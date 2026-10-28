@@ -50,7 +50,6 @@
             android:title="@string/minmax_below"
             />
 
-
         <EditTextPreference
             android:inputType="number"
             android:key="dashboardCount"
@@ -60,6 +59,17 @@
 
             />
 
+        <SeekBarPreference
+            android:defaultValue="300"
+            android:key="refreshIntervalMs"
+            android:max="500"
+            android:min="50"
+            android:persistent="false"
+            android:summary="Lower values refresh more frequently"
+            android:title="Gauge refresh interval (ms)"
+            app:showSeekBarValue="true" />
+
+        
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/media">
@@ -97,7 +107,7 @@
             android:title="@string/opacity_title"
             app:min="50"
             app:showSeekBarValue="true" />
-
+        
     </PreferenceCategory>
 
     <PreferenceCategory
