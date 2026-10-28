@@ -53,6 +53,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         opacityPref = findPreference("gaugeOpacity")!!
         blurArtPref = findPreference("blurArtwork")!!
         darkenArtPref = findPreference("darkenArtwork")!!
+        refreshIntervalPref = findPreference("refreshIntervalMs")!!
         themePref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         fontPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         backgroundPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
