@@ -2,10 +2,10 @@
 <resources>
     <string name="activity_credits_title">Credits</string>
     <string name="activity_main_title">Performance Monitor</string>
-    <string name="activity_settings_title">AA Torque Settings</string>
+    <string name="activity_settings_title">V-Sport Settings</string>
     <string name="activity_stopwatch_title">Stopwatch</string>
-    <string name="app_car_service_name">AA Torque</string>
-    <string name="app_name">AA Torque V-Sport</string>
+    <string name="app_car_service_name">V-Sport Gauges</string>
+    <string name="app_name">V-Sport Gauges</string>
     <string name="credits_author">Based on the app made by:</string>
     <string name="credits_basedon">Based on the SDK and demo App by:</string>
     <string name="credits_drivesafely">Drive Safely.</string>
