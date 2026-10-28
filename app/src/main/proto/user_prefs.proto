@@ -69,4 +69,5 @@ message UserPreference {
   uint32 opacity = 25;
   uint32 blurArt = 26;
   uint32 darkenArt = 27;
+  uint32 refreshIntervalMs = 28;
 }
