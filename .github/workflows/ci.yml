@@ -82,7 +82,7 @@ jobs:
            echo "" >> ./local.properties && ./gradlew assembleRelease 
 
       - name: Rename release
-        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/aa-torque.apk
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/v-sport-gauges.apk
 
       - name: Create Github Release
         uses: softprops/action-gh-release@v1
@@ -92,5 +92,5 @@ jobs:
           generate_release_notes: true
           draft: true
           files: |
-            app/build/outputs/apk/release/aa-torque.apk
+            app/build/outputs/apk/release/v-sport-gauges.apk
             app/build/outputs/mapping/release/mapping.txt
