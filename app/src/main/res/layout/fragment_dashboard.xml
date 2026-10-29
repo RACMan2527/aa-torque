@@ -102,7 +102,7 @@
                 android:layout_height="wrap_content"
                 android:padding="5dp"
                 android:layout_marginBottom="5dp"
-                android:visibility="@{status == 0 ? View.INVISIBLE : View.VISIBLE}"
+                android:visibility="@{status == 0 ? View.GONE : View.VISIBLE}"
                 android:text='@{status == 0 ? "" : context.getString(status)}'
                 android:textAlignment="center"
                 android:textColor="@android:color/white"
@@ -124,9 +124,10 @@
                 android:textColor="@android:color/white"
                 android:textSize="30sp"
                 android:typeface="@{font}"
+                android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/con_status" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <ImageButton
                 android:id="@+id/chartBtn"
@@ -289,7 +290,8 @@
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/dashContent : LayoutParams.UNSET}"
                     app:layout_constraintTop_toTopOf="@{showChart ? @id/chartFrag : @id/horizTop}"
                     app:layout_constraintBottom_toTopOf="@{showChart ? @id/display2 : LayoutParams.UNSET}" 
-                    android:translationY="@{showChart ? 0 : -18}"/>
+                    
+                    android:translationY="@{showChart ? 0f : -18f * context.getResources().getDisplayMetrics().density}"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display2"
@@ -303,7 +305,8 @@
                     app:layout_constraintTop_toTopOf="@{showChart ? LayoutParams.UNSET : @id/horizTop}"
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display1 : LayoutParams.UNSET}"
                     app:layout_constraintBottom_toTopOf="@{showChart ? @id/display3 : LayoutParams.UNSET}" 
-                    android:translationY="@{showChart ? 0 : -18}"/>
+                    
+                    android:translationY="@{showChart ? 0f : -18f * context.getResources().getDisplayMetrics().density}"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display3"
@@ -312,11 +315,12 @@
                     android:layout_height="0dp"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
-                    android:translationY="@{showChart ? 0 : -18}"
+                    
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display2 : @id/line50}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display2  : @id/line25}"
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display2 : LayoutParams.UNSET}"
-                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : @id/horizBottom}"/>
+                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : @id/horizBottom}"
+                    android:translationY="@{showChart ? 0f : -18f * context.getResources().getDisplayMetrics().density}"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display4"
@@ -325,10 +329,11 @@
                     android:layout_height="0dp"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
-                    android:translationY="@{showChart ? 0 : -18}"
+                    
                     app:layout_constraintBottom_toBottomOf="@{showChart ? @id/chartFrag : @id/horizBottom}"
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
-                    app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"/>
+                    app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
+                    android:translationY="@{showChart ? 0f : -18f * context.getResources().getDisplayMetrics().density}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
