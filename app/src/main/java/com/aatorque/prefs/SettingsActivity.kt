@@ -284,7 +284,7 @@ class SettingsActivity : AppCompatActivity(),
                             .putString("max", values[3])
                             .apply()
                     }
-                    Toast.makeText(baseContext, R.string.file_exported_successfully, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(baseContext, R.string.file_imported_successfully, Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Timber.e(e, "Failed to import dashboard settings")
                     Toast.makeText(
