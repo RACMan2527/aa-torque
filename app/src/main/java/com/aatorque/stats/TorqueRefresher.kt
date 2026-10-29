@@ -85,9 +85,12 @@ class TorqueRefresher {
                 return@runIfConnected
             }
             torqueData.lastData = value
+            torqueData.hasReceivedReading = true
             Timber.d("Got valid $value from torque for ${torqueData.display.label}")
-            if (value != 0.0 || torqueData.hasReceivedNonZero) {
+            if (value != 0.0) {
                 torqueData.hasReceivedNonZero = true
+            }
+            if (value != 0.0 || torqueData.hasReceivedNonZero || torqueData.allowInitialZeroUpdates) {
                 handler.post {
                     torqueData.sendNotifyUpdate()
                 }
