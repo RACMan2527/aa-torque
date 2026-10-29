@@ -318,6 +318,7 @@ open class DashboardFragment : AlbumArt() {
         val barPid = (barSettings.getString("pid", "0104") ?: "0104")
             .trim().removePrefix("torque_").uppercase()
             .takeIf { it.matches(Regex("[0-9A-F]+")) } ?: "0104"
+        val barTitle = barSettings.getString("title", "PID $barPid")?.trim().orEmpty().ifEmpty { "PID $barPid" }
         val barMin = barSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
         val configuredMax = barSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
         val barMax = if (configuredMax > barMin) configuredMax else barMin + 100.0
@@ -332,7 +333,7 @@ open class DashboardFragment : AlbumArt() {
         val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
             torqueRefresher.populateQuery(7, screenIndex, barDisplay)
         } else torqueRefresher.data[7]!!
-        loadBar.setupBar(barData, barMin, barMax, barPid)
+        loadBar.setupBar(barData, barMin, barMax, barTitle)
     }
 
     fun setScreen(direction: Int) {
