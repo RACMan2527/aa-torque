@@ -80,6 +80,12 @@
             android:persistent="false"
             app:dialogTitle="Bar PID" />
         <EditTextPreference
+            android:key="barTitle"
+            android:title="Bar title"
+            android:summary="Custom title displayed on the right side of the bar"
+            android:defaultValue="PID 0104"
+            android:persistent="false" />
+        <EditTextPreference
             android:key="barMin"
             android:title="Bar minimum"
             android:summary="Reading shown at the left end of the bar"
