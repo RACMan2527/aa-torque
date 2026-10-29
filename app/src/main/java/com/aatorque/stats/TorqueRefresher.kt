@@ -3,7 +3,7 @@ import android.os.Handler
 import android.os.Looper
 import com.aatorque.datastore.Display
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.runInterruptible
@@ -20,7 +20,7 @@ class TorqueRefresher {
     private val executor = ScheduledThreadPoolExecutor(7)
     val handler = Handler(Looper.getMainLooper())
     private var conWatcher = MutableStateFlow(ConnectStatus.CONNECTING_TORQUE)
-    val connectStatus: StateFlow<ConnectStatus> = conWatcher
+    val connectStatus = conWatcher.asSharedFlow()
     val cache = mutableMapOf<Int, HashMap<Int, TorqueData>>()
 
     companion object {
@@ -93,6 +93,10 @@ class TorqueRefresher {
                 handler.post {
                     torqueData.sendNotifyUpdate()
                 }
+            }
+            // Preserve master's connection rule: CONNECTED only after a non-zero
+            // reading has arrived, or after a previously non-zero reading.
+            if (value != 0.0 || torqueData.hasReceivedNonZero) {
                 runBlocking {
                     conWatcher.emit(ConnectStatus.CONNECTED)
                 }
