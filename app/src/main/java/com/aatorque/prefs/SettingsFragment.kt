@@ -144,28 +144,22 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barMinPref.setOnPreferenceChangeListener { pref, newValue ->
             val minText = (newValue as String).trim()
             val min = minText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
-            val current = requireContext().dataStore.data
+            val max = barMaxPref.text?.toDoubleOrNull() ?: 100.0
+            if (!min.isFinite() || min >= max) return@setOnPreferenceChangeListener false
             lifecycleScope.launch {
-                val max = current.first().horizontalBarMax.toDoubleOrNull() ?: 100.0
-                if (min.isFinite() && min < max) {
-                    requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMin(minText).build() }
-                }
+                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMin(minText).build() }
             }
-            if (!min.isFinite()) return@setOnPreferenceChangeListener false
             pref.summary = "Current: $minText"
             true
         }
         barMaxPref.setOnPreferenceChangeListener { pref, newValue ->
             val maxText = (newValue as String).trim()
             val max = maxText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
-            val current = requireContext().dataStore.data
+            val min = barMinPref.text?.toDoubleOrNull() ?: 0.0
+            if (!max.isFinite() || max <= min) return@setOnPreferenceChangeListener false
             lifecycleScope.launch {
-                val min = current.first().horizontalBarMin.toDoubleOrNull() ?: 0.0
-                if (max.isFinite() && max > min) {
-                    requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMax(maxText).build() }
-                }
+                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMax(maxText).build() }
             }
-            if (!max.isFinite()) return@setOnPreferenceChangeListener false
             pref.summary = "Current: $maxText"
             true
         }
@@ -300,6 +294,15 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 
                 refreshIntervalPref.value = refreshInterval
                 TorqueRefresher.REFRESH_INTERVAL = refreshInterval.toLong()
+
+                savedBarPid = it.horizontalBarPid.ifBlank { "0104" }.removePrefix("torque_").uppercase()
+                barPidPref.value = "torque_$savedBarPid"
+                barTitlePref.text = it.horizontalBarTitle.ifBlank { "PID $savedBarPid" }
+                barMinPref.text = it.horizontalBarMin.ifBlank { "0" }
+                barMaxPref.text = it.horizontalBarMax.ifBlank { "100" }
+                barTitlePref.summary = "Current: ${barTitlePref.text}"
+                barMinPref.summary = "Current: ${barMinPref.text}"
+                barMaxPref.summary = "Current: ${barMaxPref.text}"
             }
         }
         lifecycleScope.launch {
