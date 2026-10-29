@@ -1,8 +1,11 @@
 package com.aatorque.prefs
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.Settings
 import android.text.InputType
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +19,7 @@ import androidx.preference.SeekBarPreference
 import com.aatorque.datastore.UserPreference
 import com.aatorque.stats.NotiService
 import com.aatorque.stats.TorqueRefresher
+import com.aatorque.stats.TorqueServiceWrapper
 import com.aatorque.stats.R
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +42,31 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var darkenArtPref: SeekBarPreference
     lateinit var blurArtPref: SeekBarPreference
     lateinit var refreshIntervalPref: SeekBarPreference
-    lateinit var barPidPref: EditTextPreference
+    lateinit var barPidPref: ListPreference
+    private var barTorqueBound = false
+    private var savedBarPid = "0104"
+
+    private val barTorqueConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            val torqueService = (service as TorqueServiceWrapper.LocalBinder).getService()
+            torqueService.loadPidInformation(false) { pids ->
+                activity?.runOnUiThread {
+                    val values = pids.map { "torque_${it.first}" }.toTypedArray()
+                    val names = pids.map { it.second[0] }.toTypedArray()
+                    barPidPref.entries = names
+                    barPidPref.entryValues = values
+                    val wanted = "torque_$savedBarPid"
+                    barPidPref.value = if (values.contains(wanted)) wanted else values.firstOrNull() ?: ""
+                    barPidPref.isEnabled = values.isNotEmpty()
+                    barPidPref.summary = barPidPref.entry ?: "No Torque PIDs available"
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            barTorqueBound = false
+        }
+    }
     lateinit var barMinPref: EditTextPreference
     lateinit var barMaxPref: EditTextPreference
 
@@ -61,20 +89,21 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barMinPref = findPreference("barMin")!!
         barMaxPref = findPreference("barMax")!!
         val barSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
-        barPidPref.text = barSettings.getString("pid", "0104")
+        savedBarPid = (barSettings.getString("pid", "0104") ?: "0104")
+            .removePrefix("torque_").uppercase()
         barMinPref.text = barSettings.getString("min", "0")
         barMaxPref.text = barSettings.getString("max", "100")
-        barPidPref.summary = "Current: ${barPidPref.text}"
+        barPidPref.isEnabled = false
+        barPidPref.summary = "Loading available Torque PIDs..."
+        barPidPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         barMinPref.summary = "Current: ${barMinPref.text}"
         barMaxPref.summary = "Current: ${barMaxPref.text}"
-        barPidPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS }
         barMinPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
         barMaxPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
-        barPidPref.setOnPreferenceChangeListener { pref, newValue ->
-            val pid = (newValue as String).trim().removePrefix("torque_").uppercase()
-            if (pid.isEmpty() || !pid.matches(Regex("[0-9A-F]+"))) return@setOnPreferenceChangeListener false
+        barPidPref.setOnPreferenceChangeListener { _, newValue ->
+            val pid = (newValue as String).removePrefix("torque_").uppercase()
+            if (pid.isEmpty()) return@setOnPreferenceChangeListener false
             barSettings.edit().putString("pid", pid).apply()
-            pref.summary = "Current: $pid"
             true
         }
         barMinPref.setOnPreferenceChangeListener { pref, newValue ->
@@ -95,6 +124,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             pref.summary = "Current: $maxText"
             true
         }
+        barTorqueBound = TorqueServiceWrapper.runStartIntent(requireContext(), barTorqueConnection)
         themePref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         fontPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         backgroundPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
@@ -265,5 +295,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onStart() {
         super.onStart()
         (requireActivity() as SettingsActivity).supportActionBar!!.subtitle = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (barTorqueBound) {
+            try {
+                requireContext().unbindService(barTorqueConnection)
+            } catch (e: IllegalArgumentException) {
+                Timber.e("Failed to unbind Torque PID service", e)
+            }
+            barTorqueBound = false
+        }
     }
 }
