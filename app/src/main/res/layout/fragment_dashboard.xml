@@ -269,7 +269,7 @@
                     android:id="@+id/loadBar"
                     android:name="com.aatorque.stats.TorqueLoadBar"
                     android:layout_width="0dp"
-                    android:layout_height="36dp"
+                    android:layout_height="56dp"
                     android:layout="@layout/fragment_load_bar"
                     android:elevation="3dp"
                     android:visibility="@{!showChart ? View.VISIBLE : View.GONE}"
