@@ -214,7 +214,7 @@ open class DashboardFragment : AlbumArt() {
                     ConnectStatus.CONNECTING_TORQUE -> R.string.status_connecting_torque
                     ConnectStatus.CONNECTING_ECU -> R.string.status_connecting_to_ecu
                     ConnectStatus.SETUP_GAUGE -> R.string.status_setup_gauges
-                    ConnectStatus.CONNECTED -> null
+                    ConnectStatus.CONNECTED -> 0
                 }
             }
         }
