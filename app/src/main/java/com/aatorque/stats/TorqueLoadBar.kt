@@ -11,19 +11,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import java.util.Locale
 import kotlin.math.max
+import kotlin.math.roundToInt
 
-/**
- * Full-width horizontal calculated crank-horsepower strip.
- * Torque PID 62 is actual engine torque as a percentage of reference torque,
- * PID 63 is reference torque in Nm, and PID 0C is engine RPM.
- */
+/** Configurable horizontal bar for a single Torque PID and user-defined range. */
 class TorqueLoadBar : Fragment() {
     private lateinit var gauge: EngineLoadBarView
+    private lateinit var titleText: TextView
     private lateinit var valueText: TextView
-    private var actualTorquePercent = 0.0
-    private var referenceTorqueNm = 0.0
-    private var engineRpm = 0.0
+    private var minimum = 0.0
+    private var maximum = 100.0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,42 +30,37 @@ class TorqueLoadBar : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_load_bar, container, false)
         gauge = view.findViewById(R.id.engineLoadGauge)
+        titleText = view.findViewById(R.id.loadBarTitle)
         valueText = view.findViewById(R.id.engineLoadValue)
         return view
     }
 
-    fun setupBar(actualTorque: TorqueData, referenceTorque: TorqueData, rpm: TorqueData) {
-        actualTorque.notifyUpdate = {
-            actualTorquePercent = it.lastData
-            updatePower()
+    fun setupBar(data: TorqueData, minValue: Double, maxValue: Double, pid: String) {
+        minimum = minValue
+        maximum = if (maxValue > minValue) maxValue else minValue + 1.0
+        titleText.text = "PID $pid"
+        gauge.setRange(minimum.toFloat(), maximum.toFloat())
+        data.notifyUpdate = {
+            val value = it.lastData
+            gauge.setProgress(value.toFloat())
+            valueText.text = formatReading(value)
         }
-        referenceTorque.notifyUpdate = {
-            referenceTorqueNm = it.lastData
-            updatePower()
-        }
-        rpm.notifyUpdate = {
-            engineRpm = it.lastData
-            updatePower()
-        }
-        updatePower()
+        gauge.setProgress(minimum.toFloat())
+        valueText.text = "--"
     }
 
-    private fun updatePower() {
-        // Actual Engine Torque (PID 62) is a percentage, not lb-ft.
-        // Convert reference torque from Nm to lb-ft, then calculate US horsepower.
-        val hp = if (actualTorquePercent.isFinite() &&
-            referenceTorqueNm.isFinite() && engineRpm.isFinite() &&
-            actualTorquePercent >= 0.0 && referenceTorqueNm > 0.0 && engineRpm >= 0.0
-        ) {
-            ((actualTorquePercent / 100.0) * referenceTorqueNm * 0.737562 * engineRpm / 5252.0)
-        } else 0.0
-        val safeHp = hp.coerceIn(0.0, 500.0)
-        gauge.setProgress(safeHp.toFloat())
-        valueText.text = "${safeHp.toInt()} HP"
+    private fun formatReading(value: Double): String {
+        return if (value.isFinite()) {
+            if (value == value.roundToInt().toDouble()) {
+                value.roundToInt().toString()
+            } else {
+                String.format(Locale.US, "%.1f", value)
+            }
+        } else "--"
     }
 }
 
-/** Fixed-thickness horizontal horsepower strip with 100 HP tick marks. */
+/** Fixed-thickness bar with six tick labels spanning the configured min/max range. */
 class EngineLoadBarView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -93,10 +86,19 @@ class EngineLoadBarView @JvmOverloads constructor(
         textAlign = Paint.Align.CENTER
     }
     private val cornerRadius = 2f * density
-    private var horsepower = 0f
+    private var reading = 0f
+    private var minimum = 0f
+    private var maximum = 100f
+
+    fun setRange(minValue: Float, maxValue: Float) {
+        minimum = minValue
+        maximum = if (maxValue > minValue) maxValue else minValue + 1f
+        reading = reading.coerceIn(minimum, maximum)
+        invalidate()
+    }
 
     fun setProgress(value: Float) {
-        horsepower = value.coerceIn(0f, 500f)
+        reading = if (value.isFinite()) value.coerceIn(minimum, maximum) else minimum
         invalidate()
     }
 
@@ -114,7 +116,8 @@ class EngineLoadBarView @JvmOverloads constructor(
         val track = RectF(horizontalInset, trackTop, w - horizontalInset, trackBottom)
         canvas.drawRoundRect(track, cornerRadius, cornerRadius, trackPaint)
 
-        val filledWidth = usableWidth * horsepower / 500f
+        val fraction = ((reading - minimum) / (maximum - minimum)).coerceIn(0f, 1f)
+        val filledWidth = usableWidth * fraction
         if (filledWidth > 0f) {
             val fill = RectF(horizontalInset, trackTop, horizontalInset + filledWidth, trackBottom)
             canvas.save()
@@ -126,10 +129,20 @@ class EngineLoadBarView @JvmOverloads constructor(
         val tickTop = trackBottom + 1f * density
         val tickBottom = tickTop + 4f * density
         val labelY = minOf(h - 1f * density, tickBottom + labelPaint.textSize)
-        for (hp in 0..500 step 100) {
-            val x = horizontalInset + usableWidth * hp / 500f
+        for (index in 0..5) {
+            val fractionAtTick = index / 5f
+            val x = horizontalInset + usableWidth * fractionAtTick
+            val tickValue = minimum + (maximum - minimum) * fractionAtTick
             canvas.drawLine(x, tickTop, x, tickBottom, tickPaint)
-            canvas.drawText(hp.toString(), x, labelY, labelPaint)
+            canvas.drawText(formatTick(tickValue), x, labelY, labelPaint)
+        }
+    }
+
+    private fun formatTick(value: Float): String {
+        return if (value.isFinite() && value == value.roundToInt().toFloat()) {
+            value.roundToInt().toString()
+        } else {
+            String.format(Locale.US, "%.1f", value)
         }
     }
 }
