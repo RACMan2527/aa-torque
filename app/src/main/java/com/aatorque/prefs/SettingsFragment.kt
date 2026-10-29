@@ -38,6 +38,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var darkenArtPref: SeekBarPreference
     lateinit var blurArtPref: SeekBarPreference
     lateinit var refreshIntervalPref: SeekBarPreference
+    lateinit var barPidPref: EditTextPreference
+    lateinit var barMinPref: EditTextPreference
+    lateinit var barMaxPref: EditTextPreference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +57,44 @@ class SettingsFragment : PreferenceFragmentCompat() {
         blurArtPref = findPreference("blurArtwork")!!
         darkenArtPref = findPreference("darkenArtwork")!!
         refreshIntervalPref = findPreference("refreshIntervalMs")!!
+        barPidPref = findPreference("barPid")!!
+        barMinPref = findPreference("barMin")!!
+        barMaxPref = findPreference("barMax")!!
+        val barSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
+        barPidPref.text = barSettings.getString("pid", "0104")
+        barMinPref.text = barSettings.getString("min", "0")
+        barMaxPref.text = barSettings.getString("max", "100")
+        barPidPref.summary = "Current: ${barPidPref.text}"
+        barMinPref.summary = "Current: ${barMinPref.text}"
+        barMaxPref.summary = "Current: ${barMaxPref.text}"
+        barPidPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS }
+        barMinPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
+        barMaxPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
+        barPidPref.setOnPreferenceChangeListener { pref, newValue ->
+            val pid = (newValue as String).trim().removePrefix("torque_").uppercase()
+            if (pid.isEmpty() || !pid.matches(Regex("[0-9A-F]+"))) return@setOnPreferenceChangeListener false
+            barSettings.edit().putString("pid", pid).apply()
+            pref.summary = "Current: $pid"
+            true
+        }
+        barMinPref.setOnPreferenceChangeListener { pref, newValue ->
+            val minText = (newValue as String).trim()
+            val min = minText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
+            val max = barSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+            if (!min.isFinite() || min >= max) return@setOnPreferenceChangeListener false
+            barSettings.edit().putString("min", minText).apply()
+            pref.summary = "Current: $minText"
+            true
+        }
+        barMaxPref.setOnPreferenceChangeListener { pref, newValue ->
+            val maxText = (newValue as String).trim()
+            val max = maxText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
+            val min = barSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+            if (!max.isFinite() || max <= min) return@setOnPreferenceChangeListener false
+            barSettings.edit().putString("max", maxText).apply()
+            pref.summary = "Current: $maxText"
+            true
+        }
         themePref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         fontPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         backgroundPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
