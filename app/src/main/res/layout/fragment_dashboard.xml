@@ -313,7 +313,7 @@
                     android:id="@+id/display3"
                     android:name="com.aatorque.stats.TorqueDisplay"
                     android:layout_width="wrap_content"
-                    android:layout_height="0dp"
+                    android:layout_height="wrap_content"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
                     
@@ -327,7 +327,7 @@
                     android:id="@+id/display4"
                     android:name="com.aatorque.stats.TorqueDisplay"
                     android:layout_width="wrap_content"
-                    android:layout_height="0dp"
+                    android:layout_height="wrap_content"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
                     
