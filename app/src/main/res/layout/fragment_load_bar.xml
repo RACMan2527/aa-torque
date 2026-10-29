@@ -6,8 +6,8 @@
     android:layout_height="match_parent"
     android:paddingStart="7dp"
     android:paddingEnd="7dp"
-    android:paddingTop="3dp"
-    android:paddingBottom="3dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp"
     android:background="@drawable/bg_engine_load_frame">
 
     <TextView
@@ -23,24 +23,23 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.github.anastr.speedviewlib.ProgressiveGauge
+    <TextView
+        android:id="@+id/engineLoadValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="--%"
+        android:textColor="#F4F4F4"
+        android:textSize="12sp"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.aatorque.stats.EngineLoadBarView
         android:id="@+id/engineLoadGauge"
         android:layout_width="0dp"
-        android:layout_height="34dp"
-        android:layout_marginTop="1dp"
-        app:sv_maxSpeed="100"
-        app:sv_minSpeed="0"
-        app:sv_speedometerColor="#E53935"
-        app:sv_speedometerBackColor="#4B4B4B"
-        app:sv_speedometerWidth="14dp"
-        app:sv_speedTextColor="#F4F4F4"
-        app:sv_speedTextSize="14sp"
-        app:sv_unitTextColor="#D5D5D5"
-        app:sv_unitTextSize="10sp"
-        app:sv_textColor="@android:color/transparent"
-        app:sv_withTremble="false"
-        app:sv_unitUnderSpeedText="false"
-        app:sv_speedTextPosition="CENTER"
+        android:layout_height="7dp"
+        android:layout_marginTop="4dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/loadBarTitle"
