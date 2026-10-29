@@ -151,9 +151,10 @@ class EngineLoadBarView @JvmOverloads constructor(
             canvas.restore()
         }
 
-        // Mark the configured maximum at the right end of the scale. Draw a soft
-        // red glow first, then the crisp ClubSport-red triangle on top.
-        val markerX = horizontalInset + usableWidth
+        // Mark the current reading with a soft red glow and a crisp triangle.
+        // At the minimum (for example, zero), the marker sits at the left end.
+        // At the configured maximum, it sits at the right end.
+        val markerX = horizontalInset + usableWidth * fraction
         val markerTop = 1f * density
         val markerBottom = minOf(h - 1f * density, markerTop + maxMarkerHeight)
         val markerPath = Path().apply {
