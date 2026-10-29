@@ -214,25 +214,29 @@ class SettingsActivity : AppCompatActivity(),
                 if (uri == null) {
                     R.string.export_failed
                 } else {
-                    val data = applicationContext.dataStore.data.first()
+                    val legacyBarSettings = getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE)
+                    val data = applicationContext.dataStore.updateData { current ->
+                        if (current.horizontalBarPid.isNotEmpty() || !legacyBarSettings.contains("pid")) {
+                            current
+                        } else {
+                            val pid = legacyBarSettings.getString("pid", "0104") ?: "0104"
+                            current.toBuilder()
+                                .setHorizontalBarPid(pid.removePrefix("torque_").uppercase())
+                                .setHorizontalBarTitle(legacyBarSettings.getString("title", "PID $pid") ?: "PID $pid")
+                                .setHorizontalBarMin(legacyBarSettings.getString("min", "0") ?: "0")
+                                .setHorizontalBarMax(legacyBarSettings.getString("max", "100") ?: "100")
+                                .build()
+                        }
+                    }
                     val protobufBytes = ByteArrayOutputStream().use { buffer ->
                         UserPreferenceSerializer.writeTo(data, buffer)
                         buffer.toByteArray()
                     }
-                    val barSettings = getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE)
                     val outputStream = contentResolver.openOutputStream(uri)
                         ?: throw IOException("Could not open selected export destination")
                     outputStream.use { stream ->
-                        DataOutputStream(stream).use { output ->
-                            output.write(EXPORT_MAGIC)
-                            output.writeInt(protobufBytes.size)
-                            output.write(protobufBytes)
-                            output.writeUTF(barSettings.getString("pid", "0104") ?: "0104")
-                            output.writeUTF(barSettings.getString("title", "PID 0104") ?: "PID 0104")
-                            output.writeUTF(barSettings.getString("min", "0") ?: "0")
-                            output.writeUTF(barSettings.getString("max", "100") ?: "100")
-                            output.flush()
-                        }
+                        stream.write(protobufBytes)
+                        stream.flush()
                     }
                     R.string.file_exported_successfully
                 }
@@ -274,15 +278,17 @@ class SettingsActivity : AppCompatActivity(),
                         importedBarSettings = null
                     }
                     this@SettingsActivity.applicationContext.dataStore.updateData {
-                        UserPreference.parseFrom(ByteArrayInputStream(protobufBytes))
-                    }
-                    importedBarSettings?.let { values ->
-                        getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE).edit()
-                            .putString("pid", values[0])
-                            .putString("title", values[1])
-                            .putString("min", values[2])
-                            .putString("max", values[3])
-                            .apply()
+                        val imported = UserPreference.parseFrom(ByteArrayInputStream(protobufBytes))
+                        if (importedBarSettings == null) {
+                            imported
+                        } else {
+                            imported.toBuilder()
+                                .setHorizontalBarPid(importedBarSettings[0].removePrefix("torque_").uppercase())
+                                .setHorizontalBarTitle(importedBarSettings[1])
+                                .setHorizontalBarMin(importedBarSettings[2])
+                                .setHorizontalBarMax(importedBarSettings[3])
+                                .build()
+                        }
                     }
                     Toast.makeText(baseContext, R.string.file_imported_successfully, Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
