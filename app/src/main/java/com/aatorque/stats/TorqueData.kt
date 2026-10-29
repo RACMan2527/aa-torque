@@ -39,6 +39,8 @@ class TorqueData(var display: Display) {
     var lastDataStr: String = "-"
     var refreshTimer: ScheduledFuture<*>? = null
     var hasReceivedNonZero = false
+    var hasReceivedReading = false
+    var allowInitialZeroUpdates = false
     var currentAlarm = MutableLiveData<Coloring?>()
 
     var notifyUpdate: ((TorqueData) -> Unit)? = null
