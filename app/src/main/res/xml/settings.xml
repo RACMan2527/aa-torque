@@ -72,6 +72,29 @@
         
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="Horizontal bar">
+        <EditTextPreference
+            android:key="barPid"
+            android:title="Bar PID"
+            android:summary="Torque PID to display, ex: 0104, 0C, or 62"
+            android:defaultValue="0104"
+            android:persistent="false" />
+        <EditTextPreference
+            android:key="barMin"
+            android:title="Bar minimum"
+            android:summary="Reading shown at the left end of the bar"
+            android:defaultValue="0"
+            android:inputType="numberDecimal|numberSigned"
+            android:persistent="false" />
+        <EditTextPreference
+            android:key="barMax"
+            android:title="Bar maximum"
+            android:summary="Reading shown at the right end of the bar"
+            android:defaultValue="100"
+            android:inputType="numberDecimal|numberSigned"
+            android:persistent="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="@string/media">
         <CheckBoxPreference
             android:key="mediaBg"
