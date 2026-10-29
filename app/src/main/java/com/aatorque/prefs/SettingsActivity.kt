@@ -40,6 +40,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.IOException
 import java.net.ConnectException
 import java.net.HttpURLConnection
@@ -211,11 +215,24 @@ class SettingsActivity : AppCompatActivity(),
                     R.string.export_failed
                 } else {
                     val data = applicationContext.dataStore.data.first()
+                    val protobufBytes = ByteArrayOutputStream().use { buffer ->
+                        UserPreferenceSerializer.writeTo(data, buffer)
+                        buffer.toByteArray()
+                    }
+                    val barSettings = getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE)
                     val outputStream = contentResolver.openOutputStream(uri)
                         ?: throw IOException("Could not open selected export destination")
-                    outputStream.use {
-                        UserPreferenceSerializer.writeTo(data, it)
-                        it.flush()
+                    outputStream.use { stream ->
+                        DataOutputStream(stream).use { output ->
+                            output.write(EXPORT_MAGIC)
+                            output.writeInt(protobufBytes.size)
+                            output.write(protobufBytes)
+                            output.writeUTF(barSettings.getString("pid", "0104") ?: "0104")
+                            output.writeUTF(barSettings.getString("title", "PID 0104") ?: "PID 0104")
+                            output.writeUTF(barSettings.getString("min", "0") ?: "0")
+                            output.writeUTF(barSettings.getString("max", "100") ?: "100")
+                            output.flush()
+                        }
                     }
                     R.string.file_exported_successfully
                 }
@@ -232,16 +249,47 @@ class SettingsActivity : AppCompatActivity(),
 
     private val importFileLauncher = registerForActivityResult(ImportFileContract()) { uri: Uri? ->
         if (uri != null) {
-            val inStream = contentResolver.openInputStream(uri)
             this@SettingsActivity.lifecycleScope.launch {
                 try {
-                    this@SettingsActivity.applicationContext.dataStore.updateData {
-                        return@updateData UserPreference.parseFrom(inStream)
+                    val inputBytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        ?: throw IOException("Could not open selected settings file")
+                    val hasBarSettings = inputBytes.size >= EXPORT_MAGIC.size &&
+                        inputBytes.copyOfRange(0, EXPORT_MAGIC.size).contentEquals(EXPORT_MAGIC)
+                    val protobufBytes: ByteArray
+                    val importedBarSettings: List<String>?
+                    if (hasBarSettings) {
+                        DataInputStream(ByteArrayInputStream(inputBytes, EXPORT_MAGIC.size, inputBytes.size - EXPORT_MAGIC.size)).use { input ->
+                            val protobufSize = input.readInt()
+                            if (protobufSize < 0 || protobufSize > input.available()) {
+                                throw IOException("Invalid dashboard settings export")
+                            }
+                            protobufBytes = ByteArray(protobufSize).also(input::readFully)
+                            importedBarSettings = listOf(
+                                input.readUTF(), input.readUTF(), input.readUTF(), input.readUTF()
+                            )
+                        }
+                    } else {
+                        // Keep compatibility with existing dashboards.pb exports.
+                        protobufBytes = inputBytes
+                        importedBarSettings = null
                     }
-                } catch (e: InvalidProtocolBufferException) {
+                    this@SettingsActivity.applicationContext.dataStore.updateData {
+                        UserPreference.parseFrom(ByteArrayInputStream(protobufBytes))
+                    }
+                    importedBarSettings?.let { values ->
+                        getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE).edit()
+                            .putString("pid", values[0])
+                            .putString("title", values[1])
+                            .putString("min", values[2])
+                            .putString("max", values[3])
+                            .apply()
+                    }
+                    Toast.makeText(baseContext, R.string.file_exported_successfully, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to import dashboard settings")
                     Toast.makeText(
                         baseContext,
-                        R.string.invalid_settings,
+                        if (e is InvalidProtocolBufferException) R.string.invalid_settings else R.string.export_failed,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -441,6 +489,8 @@ class SettingsActivity : AppCompatActivity(),
         private const val REQUEST_PERMISSIONS = 0
         private const val PERMISSION_CAR_VENDOR_EXTENSION =
             "com.google.android.gms.permission.CAR_VENDOR_EXTENSION"
+        private val EXPORT_MAGIC = "AATORQUE_SETTINGS_V2\\n".toByteArray(Charsets.UTF_8)
+        private const val HORIZONTAL_BAR_SETTINGS = "horizontal_bar_settings"
         const val EXPORT_MIME = "application/octet-stream"
     }
 }
