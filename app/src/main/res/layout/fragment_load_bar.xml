@@ -16,11 +16,11 @@
         android:layout_height="wrap_content"
         android:text="PID 0104"
         android:textColor="#D5D5D5"
-        android:textSize="9sp"
+        android:textSize="18sp"
         android:letterSpacing="0.12"
         android:fontFamily="sans-serif-condensed"
         android:includeFontPadding="false"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -29,10 +29,10 @@
         android:layout_height="wrap_content"
         android:text="--"
         android:textColor="#F4F4F4"
-        android:textSize="11sp"
+        android:textSize="22sp"
         android:fontFamily="sans-serif-condensed"
         android:includeFontPadding="false"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.aatorque.stats.EngineLoadBarView
