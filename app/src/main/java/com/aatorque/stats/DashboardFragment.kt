@@ -67,30 +67,6 @@ open class DashboardFragment : AlbumArt() {
     lateinit var torqueChart: TorqueChart
     private lateinit var loadBar: TorqueLoadBar
 
-    private val actualTorqueDisplay: Display = Display.newBuilder()
-        .setPid("torque_62")
-        .setLabel("Actual Engine Torque")
-        .setMinValue(0)
-        .setMaxValue(100)
-        .setWholeNumbers(false)
-        .setShowLabel(false)
-        .build()
-    private val referenceTorqueDisplay: Display = Display.newBuilder()
-        .setPid("torque_63")
-        .setLabel("Engine Reference Torque")
-        .setMinValue(0)
-        .setMaxValue(1000)
-        .setWholeNumbers(false)
-        .setShowLabel(false)
-        .build()
-    private val engineRpmDisplay: Display = Display.newBuilder()
-        .setPid("torque_0C")
-        .setLabel("Engine RPM")
-        .setMinValue(0)
-        .setMaxValue(10000)
-        .setWholeNumbers(false)
-        .setShowLabel(false)
-        .build()
     lateinit var settingsViewModel: SettingsViewModel
 
     val viewReady = CountDownLatch(1)
@@ -169,16 +145,25 @@ open class DashboardFragment : AlbumArt() {
                         }
                     }
                 }
-                val actualTorqueData = if (torqueRefresher.hasChanged(7, actualTorqueDisplay)) {
-                    torqueRefresher.populateQuery(7, screenIndex, actualTorqueDisplay)
+                val barSettings = context.getSharedPreferences("horizontal_bar_settings", Context.MODE_PRIVATE)
+                val barPid = (barSettings.getString("pid", "0104") ?: "0104")
+                    .trim().removePrefix("torque_").uppercase()
+                    .takeIf { it.matches(Regex("[0-9A-F]+")) } ?: "0104"
+                val barMin = barSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                val configuredMax = barSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+                val barMax = if (configuredMax > barMin) configuredMax else barMin + 100.0
+                val barDisplay = Display.newBuilder()
+                    .setPid("torque_$barPid")
+                    .setLabel("PID $barPid")
+                    .setMinValue(barMin)
+                    .setMaxValue(barMax)
+                    .setWholeNumbers(false)
+                    .setShowLabel(false)
+                    .build()
+                val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
+                    torqueRefresher.populateQuery(7, screenIndex, barDisplay)
                 } else torqueRefresher.data[7]!!
-                val referenceTorqueData = if (torqueRefresher.hasChanged(8, referenceTorqueDisplay)) {
-                    torqueRefresher.populateQuery(8, screenIndex, referenceTorqueDisplay)
-                } else torqueRefresher.data[8]!!
-                val engineRpmData = if (torqueRefresher.hasChanged(9, engineRpmDisplay)) {
-                    torqueRefresher.populateQuery(9, screenIndex, engineRpmDisplay)
-                } else torqueRefresher.data[9]!!
-                loadBar.setupBar(actualTorqueData, referenceTorqueData, engineRpmData)
+                loadBar.setupBar(barData, barMin, barMax, barPid)
                 screens.displaysList.forEachIndexed { index, display ->
                     if (torqueRefresher.hasChanged(index + DISPLAY_OFFSET, display)) {
                         val td = torqueRefresher.populateQuery(
