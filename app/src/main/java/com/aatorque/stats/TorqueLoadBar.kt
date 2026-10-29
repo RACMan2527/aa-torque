@@ -77,12 +77,12 @@ class EngineLoadBarView @JvmOverloads constructor(
     }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFBDBDBD.toInt()
-        strokeWidth = max(1f, density)
+        strokeWidth = max(2f, 2f * density)
         style = Paint.Style.STROKE
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFD5D5D5.toInt()
-        textSize = 8f * density
+        textSize = 16f * density
         textAlign = Paint.Align.CENTER
     }
     private val cornerRadius = 2f * density
