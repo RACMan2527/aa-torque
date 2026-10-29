@@ -58,7 +58,6 @@ class SettingsFragment : PreferenceFragmentCompat() {
                     val wanted = "torque_$savedBarPid"
                     barPidPref.value = if (values.contains(wanted)) wanted else values.firstOrNull() ?: ""
                     barPidPref.isEnabled = values.isNotEmpty()
-                    barPidPref.summary = barPidPref.entry ?: "No Torque PIDs available"
                 }
             }
         }
