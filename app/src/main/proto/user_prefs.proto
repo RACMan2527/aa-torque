@@ -70,4 +70,8 @@ message UserPreference {
   uint32 blurArt = 26;
   uint32 darkenArt = 27;
   uint32 refreshIntervalMs = 28;
+  string horizontalBarPid = 29;
+  string horizontalBarTitle = 30;
+  string horizontalBarMin = 31;
+  string horizontalBarMax = 32;
 }
