@@ -41,9 +41,11 @@ class TorqueLoadBar : Fragment() {
         titleText.text = title
         gauge.setRange(minimum.toFloat(), maximum.toFloat())
         data.notifyUpdate = {
-            val value = it.lastData
-            gauge.setProgress(value.toFloat())
-            valueText.text = formatReading(value)
+            if (it.hasReceivedReading) {
+                val value = it.lastData
+                gauge.setProgress(value.toFloat())
+                valueText.text = formatReading(value)
+            }
         }
         gauge.setProgress(minimum.toFloat())
         valueText.text = "--"
