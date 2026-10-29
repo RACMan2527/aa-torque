@@ -3,6 +3,7 @@ package com.aatorque.stats
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.os.Bundle
 import android.util.AttributeSet
@@ -75,6 +76,24 @@ class EngineLoadBarView @JvmOverloads constructor(
         color = 0xFFE53935.toInt()
         style = Paint.Style.FILL
     }
+    private val maxMarkerColor: Int = context.theme.obtainStyledAttributes(
+        intArrayOf(R.attr.themedNeedleColor)
+    ).let { attributes ->
+        try {
+            attributes.getColor(0, android.graphics.Color.RED)
+        } finally {
+            attributes.recycle()
+        }
+    }
+    private val maxMarkerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = maxMarkerColor
+        style = Paint.Style.FILL
+        setShadowLayer(3f * density, 0f, 0f, maxMarkerColor)
+    }
+    private val maxMarkerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = maxMarkerColor
+        style = Paint.Style.FILL
+    }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFBDBDBD.toInt()
         strokeWidth = max(2f, 2f * density)
@@ -90,7 +109,7 @@ class EngineLoadBarView @JvmOverloads constructor(
         textSize = 16f * density
         textAlign = Paint.Align.CENTER
     }
-    private val cornerRadius = 2f * density
+    private val cornerRadius = 2f * density\n    private val maxMarkerWidth = 9f * density\n    private val maxMarkerHeight = 7f * density
     private var reading = 0f
     private var minimum = 0f
     private var maximum = 100f
@@ -130,7 +149,7 @@ class EngineLoadBarView @JvmOverloads constructor(
             canvas.restore()
         }
 
-        // Draw ticks after the active fill so the tick marks sit visibly on top
+        // Mark the configured maximum at the right end of the scale. Draw a soft\n        // red glow first, then the crisp ClubSport-red triangle on top.\n        val markerX = horizontalInset + usableWidth\n        val markerTop = 1f * density\n        val markerBottom = minOf(h - 1f * density, markerTop + maxMarkerHeight)\n        val markerPath = Path().apply {\n            moveTo(markerX - maxMarkerWidth / 2f, markerTop)\n            lineTo(markerX + maxMarkerWidth / 2f, markerTop)\n            lineTo(markerX, markerBottom)\n            close()\n        }\n        canvas.drawPath(markerPath, maxMarkerGlowPaint)\n        canvas.drawPath(markerPath, maxMarkerPaint)\n\n        // Draw ticks after the active fill so the tick marks sit visibly on top
         // of the red portion, as well as on the unfilled track.
         val tickTop = h * 0.12f
         val tickBottom = h * 0.76f
