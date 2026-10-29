@@ -43,6 +43,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var blurArtPref: SeekBarPreference
     lateinit var refreshIntervalPref: SeekBarPreference
     lateinit var barPidPref: ListPreference
+    lateinit var barTitlePref: EditTextPreference
     private var barTorqueBound = false
     private var savedBarPid = "0104"
 
@@ -85,6 +86,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         darkenArtPref = findPreference("darkenArtwork")!!
         refreshIntervalPref = findPreference("refreshIntervalMs")!!
         barPidPref = findPreference("barPid")!!
+        barTitlePref = findPreference("barTitle")!!
         barMinPref = findPreference("barMin")!!
         barMaxPref = findPreference("barMax")!!
         val barSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
@@ -92,6 +94,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
             .removePrefix("torque_").uppercase()
         barMinPref.text = barSettings.getString("min", "0")
         barMaxPref.text = barSettings.getString("max", "100")
+        barTitlePref.text = barSettings.getString("title", "PID 0104")
+        barTitlePref.summary = "Current: ${barTitlePref.text}"
         barPidPref.isEnabled = false
         barPidPref.summary = "Loading available Torque PIDs..."
         barPidPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
@@ -99,6 +103,13 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barMaxPref.summary = "Current: ${barMaxPref.text}"
         barMinPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
         barMaxPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
+        barTitlePref.setOnPreferenceChangeListener { pref, newValue ->
+            val title = (newValue as String).trim()
+            if (title.isEmpty()) return@setOnPreferenceChangeListener false
+            barSettings.edit().putString("title", title).apply()
+            pref.summary = "Current: $title"
+            true
+        }
         barPidPref.setOnPreferenceChangeListener { _, newValue ->
             val pid = (newValue as String).removePrefix("torque_").uppercase()
             if (pid.isEmpty()) return@setOnPreferenceChangeListener false
