@@ -20,7 +20,7 @@
         android:letterSpacing="0.12"
         android:fontFamily="sans-serif-condensed"
         android:includeFontPadding="false"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -32,7 +32,7 @@
         android:textSize="11sp"
         android:fontFamily="sans-serif-condensed"
         android:includeFontPadding="false"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.aatorque.stats.EngineLoadBarView
