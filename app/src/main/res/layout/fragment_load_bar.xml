@@ -30,7 +30,7 @@
         android:layout_marginTop="1dp"
         app:sv_maxSpeed="100"
         app:sv_minSpeed="0"
-        app:sv_speedometerColor="@color/themed"
+        app:sv_speedometerColor="#E53935"
         app:sv_speedometerBackColor="#4B4B4B"
         app:sv_speedometerWidth="14dp"
         app:sv_speedTextColor="#F4F4F4"
