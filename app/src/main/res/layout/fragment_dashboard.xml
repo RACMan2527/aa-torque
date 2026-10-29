@@ -337,7 +337,7 @@
                     app:layout_constraintTop_toTopOf="@{showChart ? LayoutParams.UNSET : @id/horizTop}"
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
-                    android:translationY="0dp"/>
+                    android:translationY="@{showChart ? 0f : -18f * context.getResources().getDisplayMetrics().density}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
