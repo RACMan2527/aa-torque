@@ -38,6 +38,7 @@ import com.aatorque.utils.CountDownLatch
 import com.google.android.apps.auto.sdk.StatusBarController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -145,25 +146,7 @@ open class DashboardFragment : AlbumArt() {
                         }
                     }
                 }
-                val barSettings = context.getSharedPreferences("horizontal_bar_settings", Context.MODE_PRIVATE)
-                val barPid = (barSettings.getString("pid", "0104") ?: "0104")
-                    .trim().removePrefix("torque_").uppercase()
-                    .takeIf { it.matches(Regex("[0-9A-F]+")) } ?: "0104"
-                val barMin = barSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
-                val configuredMax = barSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
-                val barMax = if (configuredMax > barMin) configuredMax else barMin + 100.0
-                val barDisplay = Display.newBuilder()
-                    .setPid("torque_$barPid")
-                    .setLabel("PID $barPid")
-                    .setMinValue(barMin)
-                    .setMaxValue(barMax)
-                    .setWholeNumbers(false)
-                    .setShowLabel(false)
-                    .build()
-                val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
-                    torqueRefresher.populateQuery(7, screenIndex, barDisplay)
-                } else torqueRefresher.data[7]!!
-                loadBar.setupBar(barData, barMin, barMax, barPid)
+                setupConfiguredBar(screenIndex)
                 screens.displaysList.forEachIndexed { index, display ->
                     if (torqueRefresher.hasChanged(index + DISPLAY_OFFSET, display)) {
                         val td = torqueRefresher.populateQuery(
@@ -329,6 +312,28 @@ open class DashboardFragment : AlbumArt() {
         return rootView
     }
 
+
+    private fun setupConfiguredBar(screenIndex: Int) {
+        val barSettings = requireContext().getSharedPreferences("horizontal_bar_settings", Context.MODE_PRIVATE)
+        val barPid = (barSettings.getString("pid", "0104") ?: "0104")
+            .trim().removePrefix("torque_").uppercase()
+            .takeIf { it.matches(Regex("[0-9A-F]+")) } ?: "0104"
+        val barMin = barSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+        val configuredMax = barSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+        val barMax = if (configuredMax > barMin) configuredMax else barMin + 100.0
+        val barDisplay = Display.newBuilder()
+            .setPid("torque_$barPid")
+            .setLabel("PID $barPid")
+            .setMinValue(barMin)
+            .setMaxValue(barMax)
+            .setWholeNumbers(false)
+            .setShowLabel(false)
+            .build()
+        val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
+            torqueRefresher.populateQuery(7, screenIndex, barDisplay)
+        } else torqueRefresher.data[7]!!
+        loadBar.setupBar(barData, barMin, barMax, barPid)
+    }
 
     fun setScreen(direction: Int) {
         if (screensAnimating) return
