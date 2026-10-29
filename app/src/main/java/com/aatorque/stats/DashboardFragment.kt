@@ -333,6 +333,7 @@ open class DashboardFragment : AlbumArt() {
         val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
             torqueRefresher.populateQuery(7, screenIndex, barDisplay)
         } else torqueRefresher.data[7]!!
+        barData.allowInitialZeroUpdates = true
         loadBar.setupBar(barData, barMin, barMax, barTitle)
     }
 
