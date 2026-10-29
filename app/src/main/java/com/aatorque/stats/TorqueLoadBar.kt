@@ -35,10 +35,10 @@ class TorqueLoadBar : Fragment() {
         return view
     }
 
-    fun setupBar(data: TorqueData, minValue: Double, maxValue: Double, pid: String) {
+    fun setupBar(data: TorqueData, minValue: Double, maxValue: Double, title: String) {
         minimum = minValue
         maximum = if (maxValue > minValue) maxValue else minValue + 1.0
-        titleText.text = "PID $pid"
+        titleText.text = title
         gauge.setRange(minimum.toFloat(), maximum.toFloat())
         data.notifyUpdate = {
             val value = it.lastData
