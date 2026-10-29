@@ -109,7 +109,9 @@ class EngineLoadBarView @JvmOverloads constructor(
         textSize = 16f * density
         textAlign = Paint.Align.CENTER
     }
-    private val cornerRadius = 2f * density\n    private val maxMarkerWidth = 9f * density\n    private val maxMarkerHeight = 7f * density
+    private val cornerRadius = 2f * density
+    private val maxMarkerWidth = 9f * density
+    private val maxMarkerHeight = 7f * density
     private var reading = 0f
     private var minimum = 0f
     private var maximum = 100f
@@ -149,7 +151,21 @@ class EngineLoadBarView @JvmOverloads constructor(
             canvas.restore()
         }
 
-        // Mark the configured maximum at the right end of the scale. Draw a soft\n        // red glow first, then the crisp ClubSport-red triangle on top.\n        val markerX = horizontalInset + usableWidth\n        val markerTop = 1f * density\n        val markerBottom = minOf(h - 1f * density, markerTop + maxMarkerHeight)\n        val markerPath = Path().apply {\n            moveTo(markerX - maxMarkerWidth / 2f, markerTop)\n            lineTo(markerX + maxMarkerWidth / 2f, markerTop)\n            lineTo(markerX, markerBottom)\n            close()\n        }\n        canvas.drawPath(markerPath, maxMarkerGlowPaint)\n        canvas.drawPath(markerPath, maxMarkerPaint)\n\n        // Draw ticks after the active fill so the tick marks sit visibly on top
+        // Mark the configured maximum at the right end of the scale. Draw a soft
+        // red glow first, then the crisp ClubSport-red triangle on top.
+        val markerX = horizontalInset + usableWidth
+        val markerTop = 1f * density
+        val markerBottom = minOf(h - 1f * density, markerTop + maxMarkerHeight)
+        val markerPath = Path().apply {
+            moveTo(markerX - maxMarkerWidth / 2f, markerTop)
+            lineTo(markerX + maxMarkerWidth / 2f, markerTop)
+            lineTo(markerX, markerBottom)
+            close()
+        }
+        canvas.drawPath(markerPath, maxMarkerGlowPaint)
+        canvas.drawPath(markerPath, maxMarkerPaint)
+
+        // Draw ticks after the active fill so the tick marks sit visibly on top
         // of the red portion, as well as on the unfilled track.
         val tickTop = h * 0.12f
         val tickBottom = h * 0.76f
