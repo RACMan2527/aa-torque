@@ -67,14 +67,29 @@ open class DashboardFragment : AlbumArt() {
     lateinit var torqueChart: TorqueChart
     private lateinit var loadBar: TorqueLoadBar
 
-    private val engineLoadDisplay: Display = Display.newBuilder()
-        .setPid("torque_0104")
-        .setLabel("ENGINE LOAD")
-        .setUnit("%")
+    private val actualTorqueDisplay: Display = Display.newBuilder()
+        .setPid("torque_62")
+        .setLabel("Actual Engine Torque")
         .setMinValue(0)
         .setMaxValue(100)
-        .setWholeNumbers(true)
-        .setShowLabel(true)
+        .setWholeNumbers(false)
+        .setShowLabel(false)
+        .build()
+    private val referenceTorqueDisplay: Display = Display.newBuilder()
+        .setPid("torque_63")
+        .setLabel("Engine Reference Torque")
+        .setMinValue(0)
+        .setMaxValue(1000)
+        .setWholeNumbers(false)
+        .setShowLabel(false)
+        .build()
+    private val engineRpmDisplay: Display = Display.newBuilder()
+        .setPid("torque_0C")
+        .setLabel("Engine RPM")
+        .setMinValue(0)
+        .setMaxValue(10000)
+        .setWholeNumbers(false)
+        .setShowLabel(false)
         .build()
     lateinit var settingsViewModel: SettingsViewModel
 
@@ -154,10 +169,16 @@ open class DashboardFragment : AlbumArt() {
                         }
                     }
                 }
-                if (torqueRefresher.hasChanged(7, engineLoadDisplay)) {
-                    val loadData = torqueRefresher.populateQuery(7, screenIndex, engineLoadDisplay)
-                    loadBar.setupBar(loadData)
-                }
+                val actualTorqueData = if (torqueRefresher.hasChanged(7, actualTorqueDisplay)) {
+                    torqueRefresher.populateQuery(7, screenIndex, actualTorqueDisplay)
+                } else torqueRefresher.data[7]!!
+                val referenceTorqueData = if (torqueRefresher.hasChanged(8, referenceTorqueDisplay)) {
+                    torqueRefresher.populateQuery(8, screenIndex, referenceTorqueDisplay)
+                } else torqueRefresher.data[8]!!
+                val engineRpmData = if (torqueRefresher.hasChanged(9, engineRpmDisplay)) {
+                    torqueRefresher.populateQuery(9, screenIndex, engineRpmDisplay)
+                } else torqueRefresher.data[9]!!
+                loadBar.setupBar(actualTorqueData, referenceTorqueData, engineRpmData)
                 screens.displaysList.forEachIndexed { index, display ->
                     if (torqueRefresher.hasChanged(index + DISPLAY_OFFSET, display)) {
                         val td = torqueRefresher.populateQuery(
