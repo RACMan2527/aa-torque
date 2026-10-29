@@ -125,6 +125,7 @@
     <string name="export_dashboards">Export dashboards</string>
     <string name="import_dashboards">Import dashboards</string>
     <string name="file_exported_successfully">File exported successfully</string>
+    <string name="file_imported_successfully">Settings imported successfully</string>
     <string name="export_failed">Export failed</string>
     <string name="file_not_available">Export file is not available</string>
     <string name="whole_numbers">Whole numbers</string>
