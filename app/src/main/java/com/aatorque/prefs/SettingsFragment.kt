@@ -25,6 +25,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.Collections
@@ -89,48 +90,82 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barTitlePref = findPreference("barTitle")!!
         barMinPref = findPreference("barMin")!!
         barMaxPref = findPreference("barMax")!!
-        val barSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
-        savedBarPid = (barSettings.getString("pid", "0104") ?: "0104")
-            .removePrefix("torque_").uppercase()
-        barMinPref.text = barSettings.getString("min", "0")
-        barMaxPref.text = barSettings.getString("max", "100")
-        barTitlePref.text = barSettings.getString("title", "PID 0104")
-        barTitlePref.summary = "Current: ${barTitlePref.text}"
+        val legacyBarSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
         barPidPref.isEnabled = false
         barPidPref.summary = "Loading available Torque PIDs..."
         barPidPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
-        barMinPref.summary = "Current: ${barMinPref.text}"
-        barMaxPref.summary = "Current: ${barMaxPref.text}"
         barMinPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
         barMaxPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
+
+        lifecycleScope.launch {
+            var settings = requireContext().dataStore.data.first()
+            if (settings.horizontalBarPid.isEmpty() && legacyBarSettings.contains("pid")) {
+                val legacyPid = legacyBarSettings.getString("pid", "0104") ?: "0104"
+                val legacyTitle = legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
+                val legacyMin = legacyBarSettings.getString("min", "0") ?: "0"
+                val legacyMax = legacyBarSettings.getString("max", "100") ?: "100"
+                settings = requireContext().dataStore.updateData { current ->
+                    if (current.horizontalBarPid.isNotEmpty()) current
+                    else current.toBuilder()
+                        .setHorizontalBarPid(legacyPid.removePrefix("torque_").uppercase())
+                        .setHorizontalBarTitle(legacyTitle)
+                        .setHorizontalBarMin(legacyMin)
+                        .setHorizontalBarMax(legacyMax)
+                        .build()
+                }
+            }
+            savedBarPid = settings.horizontalBarPid.ifBlank { "0104" }.removePrefix("torque_").uppercase()
+            barTitlePref.text = settings.horizontalBarTitle.ifBlank { "PID ${savedBarPid}" }
+            barMinPref.text = settings.horizontalBarMin.ifBlank { "0" }
+            barMaxPref.text = settings.horizontalBarMax.ifBlank { "100" }
+            barTitlePref.summary = "Current: ${barTitlePref.text}"
+            barMinPref.summary = "Current: ${barMinPref.text}"
+            barMaxPref.summary = "Current: ${barMaxPref.text}"
+        }
+
         barTitlePref.setOnPreferenceChangeListener { pref, newValue ->
             val title = (newValue as String).trim()
             if (title.isEmpty()) return@setOnPreferenceChangeListener false
-            barSettings.edit().putString("title", title).apply()
+            lifecycleScope.launch {
+                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarTitle(title).build() }
+            }
             pref.summary = "Current: $title"
             true
         }
         barPidPref.setOnPreferenceChangeListener { _, newValue ->
             val pid = (newValue as String).removePrefix("torque_").uppercase()
             if (pid.isEmpty()) return@setOnPreferenceChangeListener false
-            barSettings.edit().putString("pid", pid).apply()
+            savedBarPid = pid
+            lifecycleScope.launch {
+                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarPid(pid).build() }
+            }
             true
         }
         barMinPref.setOnPreferenceChangeListener { pref, newValue ->
             val minText = (newValue as String).trim()
             val min = minText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
-            val max = barSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
-            if (!min.isFinite() || min >= max) return@setOnPreferenceChangeListener false
-            barSettings.edit().putString("min", minText).apply()
+            val current = requireContext().dataStore.data
+            lifecycleScope.launch {
+                val max = current.first().horizontalBarMax.toDoubleOrNull() ?: 100.0
+                if (min.isFinite() && min < max) {
+                    requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMin(minText).build() }
+                }
+            }
+            if (!min.isFinite()) return@setOnPreferenceChangeListener false
             pref.summary = "Current: $minText"
             true
         }
         barMaxPref.setOnPreferenceChangeListener { pref, newValue ->
             val maxText = (newValue as String).trim()
             val max = maxText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
-            val min = barSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
-            if (!max.isFinite() || max <= min) return@setOnPreferenceChangeListener false
-            barSettings.edit().putString("max", maxText).apply()
+            val current = requireContext().dataStore.data
+            lifecycleScope.launch {
+                val min = current.first().horizontalBarMin.toDoubleOrNull() ?: 0.0
+                if (max.isFinite() && max > min) {
+                    requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMax(maxText).build() }
+                }
+            }
+            if (!max.isFinite()) return@setOnPreferenceChangeListener false
             pref.summary = "Current: $maxText"
             true
         }
