@@ -205,15 +205,22 @@ class SettingsActivity : AppCompatActivity(),
     }
 
     private val exportFileLauncher = registerForActivityResult(ExportFileContract()) { uri: Uri? ->
-        // This lambda will be executed when the activity result returns
         lifecycleScope.launch(Dispatchers.IO) {
-            val data = applicationContext.dataStore.data.first()
-            val result = if (uri != null) {
-                contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    UserPreferenceSerializer.writeTo(data, outputStream)
+            val result = try {
+                if (uri == null) {
+                    R.string.export_failed
+                } else {
+                    val data = applicationContext.dataStore.data.first()
+                    val outputStream = contentResolver.openOutputStream(uri)
+                        ?: throw IOException("Could not open selected export destination")
+                    outputStream.use {
+                        UserPreferenceSerializer.writeTo(data, it)
+                        it.flush()
+                    }
+                    R.string.file_exported_successfully
                 }
-                R.string.file_exported_successfully
-            } else {
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to export dashboard settings")
                 R.string.export_failed
             }
             runOnUiThread {
