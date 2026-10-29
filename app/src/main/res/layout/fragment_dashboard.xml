@@ -334,7 +334,7 @@
                     
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
-                    android:translationY="@{showChart ? (minMaxBelow ? -75 : 0) : (minMaxBelow ? -93 : -18)}"/>
+                    android:translationY="@{showChart ? (minMaxBelow ? -93 : -18) : (minMaxBelow ? -111 : -36)}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
