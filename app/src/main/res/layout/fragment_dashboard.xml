@@ -309,7 +309,7 @@
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display1 : LayoutParams.UNSET}"
                     app:layout_constraintBottom_toTopOf="@{showChart ? @id/display3 : LayoutParams.UNSET}" 
                     
-                    android:translationY="@{showChart ? 0f : -36f * context.getResources().getDisplayMetrics().density}"/>
+                    android:translationY="@{showChart ? 0f : -54f * context.getResources().getDisplayMetrics().density}"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display3"
@@ -321,9 +321,9 @@
                     
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display2 : @id/line50}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display2  : @id/line25}"
-                    app:layout_constraintTop_toBottomOf="@{showChart ? @id/display2 : LayoutParams.UNSET}"
-                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : @id/horizBottom}"
-                    android:translationY="@{showChart ? 0f : (minMaxBelow ? -75f : 0f)}"/>
+                    app:layout_constraintTop_toTopOf="@{showChart ? LayoutParams.UNSET : @id/horizTop}"
+                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : LayoutParams.UNSET}"
+                    android:translationY="0dp"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display4"
@@ -336,7 +336,7 @@
                     app:layout_constraintBottom_toBottomOf="@{showChart ? @id/chartFrag : @id/horizBottom}"
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
-                    android:translationY="@{showChart ? 0f : (minMaxBelow ? -75f : 0f)}"/>
+                    android:translationY="@{showChart ? 0f : (-18f * context.getResources().getDisplayMetrics().density) + (minMaxBelow ? -75f : 0f)}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
