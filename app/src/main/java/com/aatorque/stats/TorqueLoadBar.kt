@@ -40,15 +40,13 @@ class TorqueLoadBar : Fragment() {
         maximum = if (maxValue > minValue) maxValue else minValue + 1.0
         titleText.text = title
         gauge.setRange(minimum.toFloat(), maximum.toFloat())
+        gauge.setProgress(data.lastData.toFloat())
+        valueText.text = formatReading(data.lastData)
         data.notifyUpdate = {
-            if (it.hasReceivedReading) {
-                val value = it.lastData
-                gauge.setProgress(value.toFloat())
-                valueText.text = formatReading(value)
-            }
+            val value = it.lastData
+            gauge.setProgress(value.toFloat())
+            valueText.text = formatReading(value)
         }
-        gauge.setProgress(minimum.toFloat())
-        valueText.text = "--"
     }
 
     private fun formatReading(value: Double): String {
