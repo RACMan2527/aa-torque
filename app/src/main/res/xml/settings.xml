@@ -73,12 +73,12 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Horizontal bar">
-        <EditTextPreference
+        <ListPreference
             android:key="barPid"
             android:title="Bar PID"
-            android:summary="Torque PID to display, ex: 0104, 0C, or 62"
-            android:defaultValue="0104"
-            android:persistent="false" />
+            android:summary="Select the Torque PID to display"
+            android:persistent="false"
+            app:dialogTitle="Bar PID" />
         <EditTextPreference
             android:key="barMin"
             android:title="Bar minimum"
