@@ -323,7 +323,7 @@
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display2  : @id/line25}"
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display2 : LayoutParams.UNSET}"
                     app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : @id/horizBottom}"
-                    android:translationY="@{showChart ? 0f : (minMaxBelow ? -75f : 0f)}/>
+                    android:translationY="@{showChart ? 0f : (minMaxBelow ? -75f : 0f)}"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display4"
