@@ -80,6 +80,11 @@ class EngineLoadBarView @JvmOverloads constructor(
         strokeWidth = max(2f, 2f * density)
         style = Paint.Style.STROKE
     }
+    private val minorTickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF888888.toInt()
+        strokeWidth = max(1f, 1f * density)
+        style = Paint.Style.STROKE
+    }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFD5D5D5.toInt()
         textSize = 16f * density
@@ -130,6 +135,17 @@ class EngineLoadBarView @JvmOverloads constructor(
         val tickTop = h * 0.12f
         val tickBottom = h * 0.76f
         val labelY = minOf(h - 2f * density, h * 0.94f)
+        // Four short minor ticks divide each interval between the six primary ticks.
+        val minorTickTop = h * 0.28f
+        val minorTickBottom = h * 0.58f
+        for (interval in 0 until 5) {
+            for (minor in 1..4) {
+                val fractionAtTick = (interval + minor / 5f) / 5f
+                val x = horizontalInset + usableWidth * fractionAtTick
+                canvas.drawLine(x, minorTickTop, x, minorTickBottom, minorTickPaint)
+            }
+        }
+
         for (index in 0..5) {
             val fractionAtTick = index / 5f
             val x = horizontalInset + usableWidth * fractionAtTick
