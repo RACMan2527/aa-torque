@@ -319,9 +319,9 @@
                     
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display2 : @id/line50}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display2  : @id/line25}"
-                    app:layout_constraintTop_toTopOf="@{showChart ? LayoutParams.UNSET : @id/horizTop}"
-                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : LayoutParams.UNSET}"
-                    android:translationY="0dp"/>
+                    app:layout_constraintTop_toBottomOf="@{showChart ? @id/display2 : LayoutParams.UNSET}"
+                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display4 : @id/horizBottom}"
+                    android:translationY="@{showChart ? 0 : 54}"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display4"
@@ -335,7 +335,7 @@
                     
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
-                    android:translationY="@{minMaxBelow ? -75 : 0}"/>
+                    android:translationY="@{showChart ? (minMaxBelow ? -75 : 0) : (minMaxBelow ? -93 : -18)}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
