@@ -307,9 +307,7 @@
                     app:layout_constraintLeft_toRightOf="@{showChart ? @id/chartFrag : @id/line50}"
                     app:layout_constraintTop_toTopOf="@{showChart ? LayoutParams.UNSET : @id/horizTop}"
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display1 : LayoutParams.UNSET}"
-                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display3 : LayoutParams.UNSET}" 
-                    
-                    android:translationY="0dp"/>
+                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display3 : LayoutParams.UNSET}" />
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display3"
@@ -333,11 +331,11 @@
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
                     
-                    app:layout_constraintBottom_toBottomOf="@{showChart ? @id/chartFrag : LayoutParams.UNSET}"
-                    app:layout_constraintTop_toTopOf="@{showChart ? LayoutParams.UNSET : @id/horizTop}"
+                    app:layout_constraintBottom_toBottomOf="@{showChart ? @id/chartFrag : @id/horizBottom}"
+                    
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
-                    android:translationY="@{showChart ? 0f : -18f * context.getResources().getDisplayMetrics().density}"/>
+                    android:translationY="@{minMaxBelow ? -75 : 0}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
