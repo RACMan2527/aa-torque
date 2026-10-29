@@ -30,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.aatorque.datastore.UserPreference
+import com.aatorque.datastore.Display
 import com.aatorque.prefs.SettingsViewModel
 import com.aatorque.prefs.dataStore
 import com.aatorque.stats.databinding.FragmentDashboardBinding
@@ -64,6 +65,17 @@ open class DashboardFragment : AlbumArt() {
     private var mStarted = false
     lateinit var binding: FragmentDashboardBinding
     lateinit var torqueChart: TorqueChart
+    private lateinit var loadBar: TorqueLoadBar
+
+    private val engineLoadDisplay: Display = Display.newBuilder()
+        .setPid("torque_0104")
+        .setLabel("ENGINE LOAD")
+        .setUnit("%")
+        .setMinValue(0)
+        .setMaxValue(100)
+        .setWholeNumbers(true)
+        .setShowLabel(true)
+        .build()
     lateinit var settingsViewModel: SettingsViewModel
 
     val viewReady = CountDownLatch(1)
@@ -141,6 +153,10 @@ open class DashboardFragment : AlbumArt() {
                             guages[index]?.setupClock(clock)
                         }
                     }
+                }
+                if (torqueRefresher.hasChanged(7, engineLoadDisplay)) {
+                    val loadData = torqueRefresher.populateQuery(7, screenIndex, engineLoadDisplay)
+                    loadBar.setupBar(loadData)
                 }
                 screens.displaysList.forEachIndexed { index, display ->
                     if (torqueRefresher.hasChanged(index + DISPLAY_OFFSET, display)) {
@@ -257,6 +273,7 @@ open class DashboardFragment : AlbumArt() {
         displays[2]!!.isBottomDisplay = true
         displays[3]!!.isBottomDisplay = true
         torqueChart = childFragmentManager.findFragmentById(R.id.chartFrag)!! as TorqueChart
+        loadBar = childFragmentManager.findFragmentById(R.id.loadBar)!! as TorqueLoadBar
         val filter = IntentFilter().apply { addAction("KEY_DOWN") }
         LocalBroadcastManager.getInstance(requireContext())
             .registerReceiver(object : BroadcastReceiver() {
