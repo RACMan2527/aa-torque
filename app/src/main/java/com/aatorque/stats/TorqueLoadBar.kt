@@ -108,27 +108,28 @@ class EngineLoadBarView @JvmOverloads constructor(
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
 
-        val horizontalInset = 1f * density
+        // Keep the active range 3% clear of both horizontal edges so end ticks
+        // and rounded corners remain visible on the dashboard.
+        val horizontalInset = w * 0.03f
         val usableWidth = w - horizontalInset * 2f
-        val trackHeight = 4f * density
-        val trackTop = 1f * density
-        val trackBottom = trackTop + trackHeight
-        val track = RectF(horizontalInset, trackTop, w - horizontalInset, trackBottom)
+        val track = RectF(horizontalInset, 0f, w - horizontalInset, h)
         canvas.drawRoundRect(track, cornerRadius, cornerRadius, trackPaint)
 
         val fraction = ((reading - minimum) / (maximum - minimum)).coerceIn(0f, 1f)
         val filledWidth = usableWidth * fraction
         if (filledWidth > 0f) {
-            val fill = RectF(horizontalInset, trackTop, horizontalInset + filledWidth, trackBottom)
+            val fill = RectF(horizontalInset, 0f, horizontalInset + filledWidth, h)
             canvas.save()
-            canvas.clipRect(horizontalInset, trackTop, horizontalInset + filledWidth, trackBottom)
+            canvas.clipRect(horizontalInset, 0f, horizontalInset + filledWidth, h)
             canvas.drawRoundRect(fill, cornerRadius, cornerRadius, progressPaint)
             canvas.restore()
         }
 
-        val tickTop = trackBottom + 1f * density
-        val tickBottom = tickTop + 4f * density
-        val labelY = minOf(h - 1f * density, tickBottom + labelPaint.textSize)
+        // Draw ticks after the active fill so the tick marks sit visibly on top
+        // of the red portion, as well as on the unfilled track.
+        val tickTop = h * 0.12f
+        val tickBottom = h * 0.76f
+        val labelY = minOf(h - 2f * density, h * 0.94f)
         for (index in 0..5) {
             val fractionAtTick = index / 5f
             val x = horizontalInset + usableWidth * fractionAtTick
