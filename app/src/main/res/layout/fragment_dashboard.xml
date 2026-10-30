@@ -124,8 +124,8 @@
                 android:textSize="24sp"
                 android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:layout_constraintTop_toTopOf="@id/textTitle"
+                 />
 
             <ImageView
                 android:id="@+id/cadillacVSeriesBadge"
@@ -137,8 +137,8 @@
                 android:src="@drawable/cadillac_v_series"
                 android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent" />
+                app:layout_constraintTop_toTopOf="@id/textTitle"
+                 />
 
             <TextView
                 android:id="@+id/textTitle"
