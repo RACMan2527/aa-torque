@@ -123,6 +123,7 @@ class EngineLoadBarView @JvmOverloads constructor(
         minimum = minValue
         maximum = if (maxValue > minValue) maxValue else minValue + 1f
         reading = reading.coerceIn(minimum, maximum)
+        peak = Float.NEGATIVE_INFINITY
         invalidate()
     }
 
