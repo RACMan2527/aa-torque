@@ -42,10 +42,12 @@ class TorqueLoadBar : Fragment() {
         titleText.text = title
         gauge.setRange(minimum.toFloat(), maximum.toFloat())
         gauge.setProgress(data.lastData.toFloat())
+        gauge.setPeak(data.maxValue.toFloat())
         valueText.text = formatReading(data.lastData)
         data.notifyUpdate = {
             val value = it.lastData
             gauge.setProgress(value.toFloat())
+            gauge.setPeak(it.maxValue.toFloat())
             valueText.text = formatReading(value)
         }
     }
@@ -113,6 +115,7 @@ class EngineLoadBarView @JvmOverloads constructor(
     private val maxMarkerWidth = 9f * density
     private val maxMarkerHeight = 7f * density
     private var reading = 0f
+    private var peak = Float.NEGATIVE_INFINITY
     private var minimum = 0f
     private var maximum = 100f
 
@@ -125,7 +128,15 @@ class EngineLoadBarView @JvmOverloads constructor(
 
     fun setProgress(value: Float) {
         reading = if (value.isFinite()) value.coerceIn(minimum, maximum) else minimum
+        if (!peak.isFinite()) peak = reading
         invalidate()
+    }
+
+    fun setPeak(value: Float) {
+        if (value.isFinite()) {
+            peak = maxOf(peak.takeIf { it.isFinite() } ?: value, value).coerceIn(minimum, maximum)
+            invalidate()
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -151,10 +162,10 @@ class EngineLoadBarView @JvmOverloads constructor(
             canvas.restore()
         }
 
-        // Mark the current reading with a soft red glow and a crisp triangle.
-        // At the minimum (for example, zero), the marker sits at the left end.
-        // At the configured maximum, it sits at the right end.
-        val markerX = horizontalInset + usableWidth * fraction
+        // Mark the highest reading received with a soft glow and a crisp triangle.
+        // The progress fill continues to follow the current reading.
+        val peakFraction = (((peak.takeIf { it.isFinite() } ?: reading) - minimum) / (maximum - minimum)).coerceIn(0f, 1f)
+        val markerX = horizontalInset + usableWidth * peakFraction
         val markerTop = 1f * density
         val markerBottom = minOf(h - 1f * density, markerTop + maxMarkerHeight)
         val markerPath = Path().apply {
