@@ -7,17 +7,27 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.DeadObjectException
 import android.os.IBinder
+import android.os.Build
 import org.prowl.torque.remote.ITorqueService
 import timber.log.Timber
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 class TorqueService {
+    companion object {
+        const val ACTION_SIMULATION_SETTING_CHANGED = "com.aatorque.stats.SIMULATION_SETTING_CHANGED"
+    }
     var torqueService: ITorqueService? = null
     val onConnect = ArrayList<(ITorqueService) -> Unit>()
     val conLock = ReentrantLock()
     var hasBound = false
     private var appContext: Context? = null
+    private var simulationReceiverRegistered = false
+    private val simulationReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            applySimulationSetting()
+        }
+    }
 
     fun addConnectCallback(func: (ITorqueService) -> Unit): TorqueService {
         if (torqueService == null) {
@@ -48,11 +58,8 @@ class TorqueService {
         override fun onServiceConnected(arg0: ComponentName, service: IBinder) {
             try {
                 val svc = ITorqueService.Stub.asInterface(service)
-                val simulateMetrics = BuildConfig.SIMULATE_METRICS ||
-                    (BuildConfig.DEBUG && appContext?.getSharedPreferences(
-                        "runtime_settings", Context.MODE_PRIVATE
-                    )?.getBoolean("simulateEcuData", false) == true)
-                svc.setDebugTestMode(simulateMetrics && !svc.isConnectedToECU)
+                torqueService = svc
+                applySimulationSetting()
                 torqueService = svc
                 conLock.withLock {
                     for (funt in onConnect) {
@@ -77,7 +84,20 @@ class TorqueService {
         }
     }
 
+    private fun applySimulationSetting() {
+        val context = appContext ?: return
+        val simulateMetrics = BuildConfig.SIMULATE_METRICS ||
+            (BuildConfig.DEBUG && context.getSharedPreferences(
+                "runtime_settings", Context.MODE_PRIVATE
+            ).getBoolean("simulateEcuData", false))
+        torqueService?.setDebugTestMode(simulateMetrics && torqueService?.isConnectedToECU == false)
+    }
+
     fun onDestroy(context: Context) {
+        if (simulationReceiverRegistered) {
+            context.unregisterReceiver(simulationReceiver)
+            simulationReceiverRegistered = false
+        }
         if (torqueService != null) {
             context.unbindService(torqueConnection)
             hasBound = false
@@ -91,6 +111,15 @@ class TorqueService {
     }
     fun startTorque(context: Context): Boolean {
         appContext = context.applicationContext
+        if (!simulationReceiverRegistered) {
+            val filter = android.content.IntentFilter(ACTION_SIMULATION_SETTING_CHANGED)
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.registerReceiver(simulationReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                context.registerReceiver(simulationReceiver, filter)
+            }
+            simulationReceiverRegistered = true
+        }
         val intent = Intent()
         intent.setClassName("org.prowl.torque", "org.prowl.torque.remote.TorqueService")
         hasBound = context.bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
