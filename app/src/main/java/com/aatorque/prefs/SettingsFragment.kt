@@ -189,7 +189,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
             savedBarPid = pid
             updateBarPidChoices()
             val appContext = requireContext().applicationContext
-            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+            // Commit the selected PID before accepting the preference change.
+            // This guarantees an immediate export or app exit cannot overtake the write.
+            kotlinx.coroutines.runBlocking {
                 appContext.dataStore.updateData { current ->
                     val bar = current.horizontalBarDisplay.toBuilder().setPid("torque_$pid")
                     // Keep the generated title in sync with PID changes, but preserve a
