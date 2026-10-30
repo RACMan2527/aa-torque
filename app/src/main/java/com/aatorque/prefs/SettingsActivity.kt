@@ -237,6 +237,9 @@ class SettingsActivity : AppCompatActivity(),
                             ).build()
                         }
                     }
+                    if (data.horizontalBarDisplay.pid.isBlank()) {
+                        throw IOException("Horizontal gauge PID is not saved. Select a PID before exporting.")
+                    }
                     val protobufBytes = ByteArrayOutputStream().use { buffer ->
                         UserPreferenceSerializer.writeTo(data, buffer)
                         buffer.toByteArray()
@@ -289,7 +292,24 @@ class SettingsActivity : AppCompatActivity(),
                     this@SettingsActivity.applicationContext.dataStore.updateData {
                         val imported = UserPreference.parseFrom(ByteArrayInputStream(protobufBytes))
                         if (importedBarSettings == null) {
-                            imported
+                            // Current protobuf exports carry the horizontal PID in field 33.
+                            // Older exports may only have the legacy fields 29-32.
+                            if (imported.horizontalBarDisplay.pid.isNotBlank()) {
+                                imported
+                            } else {
+                                val pid = imported.horizontalBarPid.removePrefix("torque_")
+                                    .uppercase().ifBlank { "0104" }
+                                val title = imported.horizontalBarTitle.ifBlank { "PID $pid" }
+                                val min = imported.horizontalBarMin.toDoubleOrNull() ?: 0.0
+                                val max = imported.horizontalBarMax.toDoubleOrNull() ?: 100.0
+                                imported.toBuilder().setHorizontalBarDisplay(
+                                    Display.newBuilder().setPid("torque_$pid")
+                                        .setLabel(title).setShowLabel(false)
+                                        .setHorizontalMinValue(min)
+                                        .setHorizontalMaxValue(if (max > min) max else min + 100.0)
+                                        .setMinValue(min.toInt()).setMaxValue(max.toInt()).build()
+                                ).build()
+                            }
                         } else {
                             val pid = importedBarSettings[0].removePrefix("torque_").uppercase()
                             val min = importedBarSettings[2].toDoubleOrNull() ?: 0.0
