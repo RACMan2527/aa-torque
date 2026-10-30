@@ -155,8 +155,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barTitlePref.setOnPreferenceChangeListener { pref, newValue ->
             val title = (newValue as String).trim()
             if (title.isEmpty()) return@setOnPreferenceChangeListener false
-            lifecycleScope.launch {
-                requireContext().dataStore.updateData { current ->
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                requireContext().applicationContext.dataStore.updateData { current ->
                 current.toBuilder().setHorizontalBarDisplay(
                     current.horizontalBarDisplay.toBuilder().setLabel(title)
                 ).build()
@@ -170,8 +170,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
             if (pid.isEmpty()) return@setOnPreferenceChangeListener false
             val previousPid = savedBarPid
             savedBarPid = pid
-            lifecycleScope.launch {
-                requireContext().dataStore.updateData { current ->
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                requireContext().applicationContext.dataStore.updateData { current ->
                     val bar = current.horizontalBarDisplay.toBuilder().setPid("torque_$pid")
                     // Keep the generated title in sync with PID changes, but preserve a
                     // title the user has explicitly customized.
@@ -189,8 +189,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val min = minText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
             val max = barMaxPref.text?.toDoubleOrNull() ?: 100.0
             if (!min.isFinite() || min >= max) return@setOnPreferenceChangeListener false
-            lifecycleScope.launch {
-                requireContext().dataStore.updateData { current ->
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                requireContext().applicationContext.dataStore.updateData { current ->
                     val bar = current.horizontalBarDisplay.toBuilder()
                         .setHorizontalMinValue(min).setMinValue(min.toInt())
                     current.toBuilder().setHorizontalBarDisplay(bar).build()
@@ -204,8 +204,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val max = maxText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
             val min = barMinPref.text?.toDoubleOrNull() ?: 0.0
             if (!max.isFinite() || max <= min) return@setOnPreferenceChangeListener false
-            lifecycleScope.launch {
-                requireContext().dataStore.updateData { current ->
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                requireContext().applicationContext.dataStore.updateData { current ->
                     val bar = current.horizontalBarDisplay.toBuilder()
                         .setHorizontalMaxValue(max).setMaxValue(max.toInt())
                     current.toBuilder().setHorizontalBarDisplay(bar).build()
