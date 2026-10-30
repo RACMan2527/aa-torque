@@ -17,6 +17,7 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import com.aatorque.datastore.UserPreference
+import com.aatorque.datastore.Display
 import com.aatorque.stats.NotiService
 import com.aatorque.stats.TorqueRefresher
 import com.aatorque.stats.TorqueServiceWrapper
@@ -58,7 +59,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
                     barPidPref.entries = names
                     barPidPref.entryValues = values
                     val wanted = "torque_$savedBarPid"
-                    barPidPref.value = if (values.contains(wanted)) wanted else values.firstOrNull() ?: ""
+                    // Keep the persisted selection even if Torque does not currently
+                    // advertise it. It may become available after reconnect.
+                    barPidPref.value = wanted
                     barPidPref.isEnabled = values.isNotEmpty()
                 }
             }
@@ -113,25 +116,37 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         lifecycleScope.launch {
             var settings = requireContext().dataStore.data.first()
-            if (settings.horizontalBarPid.isEmpty() && legacyBarSettings.contains("pid")) {
-                val legacyPid = legacyBarSettings.getString("pid", "0104") ?: "0104"
-                val legacyTitle = legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
-                val legacyMin = legacyBarSettings.getString("min", "0") ?: "0"
-                val legacyMax = legacyBarSettings.getString("max", "100") ?: "100"
+            if (settings.horizontalBarDisplay.pid.isBlank()) {
+                val legacyPid = settings.horizontalBarPid.ifBlank {
+                    legacyBarSettings.getString("pid", "0104") ?: "0104"
+                }.removePrefix("torque_").uppercase()
+                val legacyTitle = settings.horizontalBarTitle.ifBlank {
+                    legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
+                }
+                val legacyMin = settings.horizontalBarMin.toDoubleOrNull()
+                    ?: legacyBarSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                val legacyMax = settings.horizontalBarMax.toDoubleOrNull()
+                    ?: legacyBarSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
                 settings = requireContext().dataStore.updateData { current ->
-                    if (current.horizontalBarPid.isNotEmpty()) current
-                    else current.toBuilder()
-                        .setHorizontalBarPid(legacyPid.removePrefix("torque_").uppercase())
-                        .setHorizontalBarTitle(legacyTitle)
-                        .setHorizontalBarMin(legacyMin)
-                        .setHorizontalBarMax(legacyMax)
-                        .build()
+                    if (current.horizontalBarDisplay.pid.isNotBlank()) current
+                    else current.toBuilder().setHorizontalBarDisplay(
+                        Display.newBuilder()
+                            .setPid("torque_$legacyPid")
+                            .setLabel(legacyTitle)
+                            .setShowLabel(false)
+                            .setHorizontalMinValue(legacyMin)
+                            .setHorizontalMaxValue(if (legacyMax > legacyMin) legacyMax else legacyMin + 100.0)
+                            .setMinValue(legacyMin.toInt())
+                            .setMaxValue(legacyMax.toInt())
+                            .build()
+                    ).build()
                 }
             }
-            savedBarPid = settings.horizontalBarPid.ifBlank { "0104" }.removePrefix("torque_").uppercase()
-            barTitlePref.text = settings.horizontalBarTitle.ifBlank { "PID ${savedBarPid}" }
-            barMinPref.text = settings.horizontalBarMin.ifBlank { "0" }
-            barMaxPref.text = settings.horizontalBarMax.ifBlank { "100" }
+            val bar = settings.horizontalBarDisplay
+            savedBarPid = bar.pid.removePrefix("torque_").uppercase().ifBlank { "0104" }
+            barTitlePref.text = bar.label.ifBlank { "PID $savedBarPid" }
+            barMinPref.text = (if (bar.hasHorizontalMinValue()) bar.horizontalMinValue else bar.minValue.toDouble()).toString()
+            barMaxPref.text = (if (bar.hasHorizontalMaxValue()) bar.horizontalMaxValue else bar.maxValue.toDouble()).toString()
             barTitlePref.summary = "Current: ${barTitlePref.text}"
             barMinPref.summary = "Current: ${barMinPref.text}"
             barMaxPref.summary = "Current: ${barMaxPref.text}"
@@ -141,7 +156,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val title = (newValue as String).trim()
             if (title.isEmpty()) return@setOnPreferenceChangeListener false
             lifecycleScope.launch {
-                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarTitle(title).build() }
+                requireContext().dataStore.updateData { current ->
+                current.toBuilder().setHorizontalBarDisplay(
+                    current.horizontalBarDisplay.toBuilder().setLabel(title)
+                ).build()
+            }
             }
             pref.summary = "Current: $title"
             true
@@ -153,14 +172,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
             savedBarPid = pid
             lifecycleScope.launch {
                 requireContext().dataStore.updateData { current ->
-                    val builder = current.toBuilder().setHorizontalBarPid(pid)
+                    val bar = current.horizontalBarDisplay.toBuilder().setPid("torque_$pid")
                     // Keep the generated title in sync with PID changes, but preserve a
                     // title the user has explicitly customized.
-                    if (current.horizontalBarTitle.isBlank() ||
-                        current.horizontalBarTitle == "PID $previousPid") {
-                        builder.setHorizontalBarTitle("PID $pid")
+                    if (current.horizontalBarDisplay.label.isBlank() ||
+                        current.horizontalBarDisplay.label == "PID $previousPid") {
+                        bar.setLabel("PID $pid")
                     }
-                    builder.build()
+                    current.toBuilder().setHorizontalBarDisplay(bar).build()
                 }
             }
             true
@@ -171,7 +190,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val max = barMaxPref.text?.toDoubleOrNull() ?: 100.0
             if (!min.isFinite() || min >= max) return@setOnPreferenceChangeListener false
             lifecycleScope.launch {
-                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMin(minText).build() }
+                requireContext().dataStore.updateData { current ->
+                    val bar = current.horizontalBarDisplay.toBuilder()
+                        .setHorizontalMinValue(min).setMinValue(min.toInt())
+                    current.toBuilder().setHorizontalBarDisplay(bar).build()
+                }
             }
             pref.summary = "Current: $minText"
             true
@@ -182,7 +205,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val min = barMinPref.text?.toDoubleOrNull() ?: 0.0
             if (!max.isFinite() || max <= min) return@setOnPreferenceChangeListener false
             lifecycleScope.launch {
-                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarMax(maxText).build() }
+                requireContext().dataStore.updateData { current ->
+                    val bar = current.horizontalBarDisplay.toBuilder()
+                        .setHorizontalMaxValue(max).setMaxValue(max.toInt())
+                    current.toBuilder().setHorizontalBarDisplay(bar).build()
+                }
             }
             pref.summary = "Current: $maxText"
             true
@@ -319,11 +346,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 refreshIntervalPref.value = refreshInterval
                 TorqueRefresher.REFRESH_INTERVAL = refreshInterval.toLong()
 
-                savedBarPid = it.horizontalBarPid.ifBlank { "0104" }.removePrefix("torque_").uppercase()
-                barPidPref.value = "torque_$savedBarPid"
-                barTitlePref.text = it.horizontalBarTitle.ifBlank { "PID $savedBarPid" }
-                barMinPref.text = it.horizontalBarMin.ifBlank { "0" }
-                barMaxPref.text = it.horizontalBarMax.ifBlank { "100" }
+                val bar = it.horizontalBarDisplay
+                savedBarPid = bar.pid.removePrefix("torque_").uppercase().ifBlank { "0104" }
+                // Do not replace an unavailable saved PID with the first PID
+                // returned by Torque. Preserve the saved selection for reconnect.
+                val selectedPid = "torque_$savedBarPid"
+                if (barPidPref.entryValues?.any { value -> value == selectedPid } == true) {
+                    barPidPref.value = selectedPid
+                }
+                barTitlePref.text = bar.label.ifBlank { "PID $savedBarPid" }
+                barMinPref.text = (if (bar.hasHorizontalMinValue()) bar.horizontalMinValue else bar.minValue.toDouble()).toString()
+                barMaxPref.text = (if (bar.hasHorizontalMaxValue()) bar.horizontalMaxValue else bar.maxValue.toDouble()).toString()
                 barTitlePref.summary = "Current: ${barTitlePref.text}"
                 barMinPref.summary = "Current: ${barMinPref.text}"
                 barMaxPref.summary = "Current: ${barMaxPref.text}"
