@@ -1,5 +1,6 @@
 package com.aatorque.stats
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -10,6 +11,7 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import java.util.Locale
@@ -46,7 +48,7 @@ class TorqueLoadBar : Fragment() {
         valueText.text = formatReading(data.lastData)
         data.notifyUpdate = {
             val value = it.lastData
-            gauge.setProgress(value.toFloat())
+            gauge.animateProgress(value.toFloat(), TorqueRefresher.REFRESH_INTERVAL)
             gauge.setPeak(it.maxValue.toFloat())
             valueText.text = formatReading(value)
         }
@@ -125,6 +127,31 @@ class EngineLoadBarView @JvmOverloads constructor(
         reading = if (value.isFinite()) value.coerceIn(minimum, maximum) else minimum
         if (!peak.isFinite()) peak = reading
         invalidate()
+    }
+
+    private var progressAnimator: ValueAnimator? = null
+
+    /**
+     * Interpolate each new Torque sample over the same refresh window used by
+     * the round gauges. This avoids a visible step every time the PID updates.
+     */
+    fun animateProgress(value: Float, durationMs: Long) {
+        if (!value.isFinite()) return
+        val target = value.coerceIn(minimum, maximum)
+        progressAnimator?.cancel()
+        if (durationMs <= 0L || reading == target) {
+            setProgress(target)
+            return
+        }
+        progressAnimator = ValueAnimator.ofFloat(reading, target).apply {
+            duration = durationMs
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener { animator ->
+                reading = (animator.animatedValue as Float).coerceIn(minimum, maximum)
+                invalidate()
+            }
+            start()
+        }
     }
 
     fun setPeak(value: Float) {
