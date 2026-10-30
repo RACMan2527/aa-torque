@@ -335,9 +335,15 @@ open class DashboardFragment : AlbumArt() {
 
 
     private fun setupConfiguredBar(screenIndex: Int, settings: UserPreference) {
-        val barPid = settings.horizontalBarPid.ifBlank { "0104" }
-            .trim().removePrefix("torque_").uppercase()
-            .takeIf { it.matches(Regex("[0-9A-F]+")) } ?: "0104"
+        // Keep the complete Torque PID identifier, just as the round-gauge
+        // path does. Some Torque identifiers include a comma suffix (for
+        // example, "0C,0"); a hex-only validation silently replaced those
+        // selected PIDs with the default 0104.
+        val barPid = settings.horizontalBarPid
+            .trim()
+            .removePrefix("torque_")
+            .uppercase()
+            .ifBlank { "0104" }
         val barTitle = settings.horizontalBarTitle.trim().ifEmpty { "PID $barPid" }
         val barMin = settings.horizontalBarMin.toDoubleOrNull() ?: 0.0
         val configuredMax = settings.horizontalBarMax.toDoubleOrNull() ?: 100.0
