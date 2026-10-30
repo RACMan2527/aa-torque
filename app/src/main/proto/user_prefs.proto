@@ -74,4 +74,5 @@ message UserPreference {
   string horizontalBarTitle = 30;
   string horizontalBarMin = 31;
   string horizontalBarMax = 32;
+  Display horizontalBarDisplay = 33;
 }
