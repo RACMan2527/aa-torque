@@ -117,7 +117,7 @@
                 android:id="@+id/dashboardClock"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="60dp"
+                android:layout_marginStart="30dp"
                 android:format12Hour="h:mm a"
                 android:format24Hour="HH:mm"
                 android:textColor="@android:color/white"
@@ -129,8 +129,8 @@
 
             <ImageView
                 android:id="@+id/cadillacVSeriesBadge"
-                android:layout_width="92dp"
-                android:layout_height="45dp"
+                android:layout_width="120dp"
+                android:layout_height="59dp"
                 android:layout_marginEnd="18dp"
                 android:contentDescription="Cadillac V-Series badge"
                 android:scaleType="fitCenter"
