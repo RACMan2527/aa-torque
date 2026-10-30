@@ -135,9 +135,19 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barPidPref.setOnPreferenceChangeListener { _, newValue ->
             val pid = (newValue as String).removePrefix("torque_").uppercase()
             if (pid.isEmpty()) return@setOnPreferenceChangeListener false
+            val previousPid = savedBarPid
             savedBarPid = pid
             lifecycleScope.launch {
-                requireContext().dataStore.updateData { it.toBuilder().setHorizontalBarPid(pid).build() }
+                requireContext().dataStore.updateData { current ->
+                    val builder = current.toBuilder().setHorizontalBarPid(pid)
+                    // Keep the generated title in sync with PID changes, but preserve a
+                    // title the user has explicitly customized.
+                    if (current.horizontalBarTitle.isBlank() ||
+                        current.horizontalBarTitle == "PID $previousPid") {
+                        builder.setHorizontalBarTitle("PID $pid")
+                    }
+                    builder.build()
+                }
             }
             true
         }
