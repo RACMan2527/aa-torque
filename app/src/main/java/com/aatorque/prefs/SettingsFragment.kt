@@ -104,6 +104,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             ).edit().putBoolean("simulateEcuData", newValue as Boolean).apply()
             requireContext().sendBroadcast(
                 Intent(com.aatorque.stats.TorqueService.ACTION_SIMULATION_SETTING_CHANGED)
+                    .setPackage(requireContext().packageName)
             )
             true
         }
