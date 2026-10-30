@@ -121,26 +121,35 @@ open class DashboardFragment : AlbumArt() {
         }
         registerWithView {
             data -> data.collect {
-                if (it.horizontalBarPid.isEmpty()) {
+                if (it.horizontalBarDisplay.pid.isBlank()) {
                     val legacyBarSettings = context.getSharedPreferences("horizontal_bar_settings", Context.MODE_PRIVATE)
-                    if (legacyBarSettings.contains("pid")) {
-                        val legacyPid = legacyBarSettings.getString("pid", "0104") ?: "0104"
-                        val legacyTitle = legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
-                        val legacyMin = legacyBarSettings.getString("min", "0") ?: "0"
-                        val legacyMax = legacyBarSettings.getString("max", "100") ?: "100"
-                        lifecycleScope.launch {
-                            context.dataStore.updateData { current ->
-                                if (current.horizontalBarPid.isNotEmpty()) current
-                                else current.toBuilder()
-                                    .setHorizontalBarPid(legacyPid.removePrefix("torque_").uppercase())
-                                    .setHorizontalBarTitle(legacyTitle)
-                                    .setHorizontalBarMin(legacyMin)
-                                    .setHorizontalBarMax(legacyMax)
-                                    .build()
-                            }
-                        }
-                        return@collect
+                    val legacyPid = it.horizontalBarPid.ifBlank {
+                        legacyBarSettings.getString("pid", "0104") ?: "0104"
+                    }.removePrefix("torque_").uppercase()
+                    val legacyTitle = it.horizontalBarTitle.ifBlank {
+                        legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
                     }
+                    val legacyMin = it.horizontalBarMin.toDoubleOrNull()
+                        ?: legacyBarSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                    val legacyMax = it.horizontalBarMax.toDoubleOrNull()
+                        ?: legacyBarSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+                    lifecycleScope.launch {
+                        context.dataStore.updateData { current ->
+                            if (current.horizontalBarDisplay.pid.isNotBlank()) current
+                            else current.toBuilder().setHorizontalBarDisplay(
+                                Display.newBuilder()
+                                    .setPid("torque_$legacyPid")
+                                    .setLabel(legacyTitle)
+                                    .setShowLabel(false)
+                                    .setHorizontalMinValue(legacyMin)
+                                    .setHorizontalMaxValue(if (legacyMax > legacyMin) legacyMax else legacyMin + 100.0)
+                                    .setMinValue(legacyMin.toInt())
+                                    .setMaxValue(legacyMax.toInt())
+                                    .build()
+                            ).build()
+                        }
+                    }
+                    return@collect
                 }
                 val screenIndex = abs(it.currentScreen) % it.screensCount
                 val screens = it.screensList[screenIndex]
@@ -356,8 +365,8 @@ open class DashboardFragment : AlbumArt() {
         barData.allowInitialZeroUpdates = true
         loadBar.setupBar(
             barData,
-            configuredDisplay.minValue.toDouble(),
-            configuredDisplay.maxValue.toDouble(),
+            if (configuredDisplay.hasHorizontalMinValue()) configuredDisplay.horizontalMinValue else configuredDisplay.minValue.toDouble(),
+            if (configuredDisplay.hasHorizontalMaxValue()) configuredDisplay.horizontalMaxValue else configuredDisplay.maxValue.toDouble(),
             configuredDisplay.label.ifBlank { "PID $barPid" }
         )
     }
