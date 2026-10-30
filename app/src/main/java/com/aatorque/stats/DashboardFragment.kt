@@ -347,18 +347,13 @@ open class DashboardFragment : AlbumArt() {
         // The horizontal bar uses the same persisted Display configuration as
         // a round gauge. Only its renderer is different.
         val barDisplay = settings.horizontalBarDisplay
-        val barPid = barDisplay.pid
-            .trim()
-            .removePrefix("torque_")
-            .uppercase()
-            .ifBlank { "0104" }
+        // Match the round gauges: pass the saved Display, including its exact
+        // Torque PID identifier, straight through to TorqueRefresher.
+        // The horizontal bar changes only the renderer, not PID construction.
         val configuredDisplay = barDisplay.toBuilder()
-            .setPid("torque_$barPid")
-            .setLabel(barDisplay.label.ifBlank { "PID $barPid" })
-            .setMinValue(barDisplay.minValue)
-            .setMaxValue(if (barDisplay.maxValue > barDisplay.minValue) barDisplay.maxValue else barDisplay.minValue + 100)
             .setShowLabel(false)
             .build()
+        val barPid = configuredDisplay.pid.removePrefix("torque_")
         val barData = if (torqueRefresher.hasChanged(7, configuredDisplay)) {
             torqueRefresher.populateQuery(7, screenIndex, configuredDisplay)
         } else torqueRefresher.data[7]!!
