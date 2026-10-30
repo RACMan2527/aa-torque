@@ -48,21 +48,36 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var barTitlePref: EditTextPreference
     private var barTorqueBound = false
     private var savedBarPid = "0104"
+    private var availableBarPidEntries: Array<String> = emptyArray()
+    private var availableBarPidNames: Array<String> = emptyArray()
+
+    // Rebuild the list only after combining Torque's available PIDs with the
+    // persisted selection. This avoids losing the saved PID when the service
+    // responds before DataStore has finished loading.
+    private fun updateBarPidChoices() {
+        val wanted = "torque_$savedBarPid"
+        val values = availableBarPidEntries.toMutableList()
+        val names = availableBarPidNames.toMutableList()
+        if (wanted !in values) {
+            values.add(0, wanted)
+            names.add(0, "PID $savedBarPid (saved, unavailable)")
+        }
+        barPidPref.entries = names.toTypedArray()
+        barPidPref.entryValues = values.toTypedArray()
+        barPidPref.value = wanted
+        barPidPref.isEnabled = values.isNotEmpty()
+    }
 
     private val barTorqueConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             val torqueService = (service as TorqueServiceWrapper.LocalBinder).getService()
             torqueService.loadPidInformation(false) { pids ->
                 activity?.runOnUiThread {
-                    val values = pids.map { "torque_${it.first}" }.toTypedArray()
-                    val names = pids.map { it.second[0] }.toTypedArray()
-                    barPidPref.entries = names
-                    barPidPref.entryValues = values
-                    val wanted = "torque_$savedBarPid"
-                    // Keep the persisted selection even if Torque does not currently
-                    // advertise it. It may become available after reconnect.
-                    barPidPref.value = wanted
-                    barPidPref.isEnabled = values.isNotEmpty()
+                    availableBarPidEntries = pids.map {
+                        "torque_${it.first.removePrefix("torque_").uppercase()}"
+                    }.toTypedArray()
+                    availableBarPidNames = pids.map { it.second[0] }.toTypedArray()
+                    updateBarPidChoices()
                 }
             }
         }
@@ -172,6 +187,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             if (pid.isEmpty()) return@setOnPreferenceChangeListener false
             val previousPid = savedBarPid
             savedBarPid = pid
+            updateBarPidChoices()
             val appContext = requireContext().applicationContext
             (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
                 appContext.dataStore.updateData { current ->
@@ -355,10 +371,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 savedBarPid = bar.pid.removePrefix("torque_").uppercase().ifBlank { "0104" }
                 // Do not replace an unavailable saved PID with the first PID
                 // returned by Torque. Preserve the saved selection for reconnect.
-                val selectedPid = "torque_$savedBarPid"
-                if (barPidPref.entryValues?.any { value -> value == selectedPid } == true) {
-                    barPidPref.value = selectedPid
-                }
+                updateBarPidChoices()
                 barTitlePref.text = bar.label.ifBlank { "PID $savedBarPid" }
                 barMinPref.text = (if (bar.hasHorizontalMinValue()) bar.horizontalMinValue else bar.minValue.toDouble()).toString()
                 barMaxPref.text = (if (bar.hasHorizontalMaxValue()) bar.horizontalMaxValue else bar.maxValue.toDouble()).toString()
