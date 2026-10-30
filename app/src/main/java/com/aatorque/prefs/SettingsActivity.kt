@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.aatorque.datastore.UserPreference
+import com.aatorque.datastore.Display
 import com.aatorque.stats.App
 import com.aatorque.stats.BuildConfig
 import com.aatorque.stats.CreditsFragment
@@ -214,18 +215,26 @@ class SettingsActivity : AppCompatActivity(),
                 if (uri == null) {
                     R.string.export_failed
                 } else {
-                    val legacyBarSettings = getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE)
                     val data = applicationContext.dataStore.updateData { current ->
-                        if (current.horizontalBarPid.isNotEmpty() || !legacyBarSettings.contains("pid")) {
-                            current
-                        } else {
-                            val pid = legacyBarSettings.getString("pid", "0104") ?: "0104"
-                            current.toBuilder()
-                                .setHorizontalBarPid(pid.removePrefix("torque_").uppercase())
-                                .setHorizontalBarTitle(legacyBarSettings.getString("title", "PID $pid") ?: "PID $pid")
-                                .setHorizontalBarMin(legacyBarSettings.getString("min", "0") ?: "0")
-                                .setHorizontalBarMax(legacyBarSettings.getString("max", "100") ?: "100")
-                                .build()
+                        if (current.horizontalBarDisplay.pid.isNotBlank()) current
+                        else {
+                            val legacyBarSettings = getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE)
+                            val pid = current.horizontalBarPid.ifBlank {
+                                legacyBarSettings.getString("pid", "0104") ?: "0104"
+                            }.removePrefix("torque_").uppercase()
+                            val title = current.horizontalBarTitle.ifBlank {
+                                legacyBarSettings.getString("title", "PID $pid") ?: "PID $pid"
+                            }
+                            val min = current.horizontalBarMin.toDoubleOrNull()
+                                ?: legacyBarSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                            val max = current.horizontalBarMax.toDoubleOrNull()
+                                ?: legacyBarSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+                            current.toBuilder().setHorizontalBarDisplay(
+                                Display.newBuilder().setPid("torque_$pid").setLabel(title)
+                                    .setShowLabel(false).setHorizontalMinValue(min)
+                                    .setHorizontalMaxValue(if (max > min) max else min + 100.0)
+                                    .setMinValue(min.toInt()).setMaxValue(max.toInt()).build()
+                            ).build()
                         }
                     }
                     val protobufBytes = ByteArrayOutputStream().use { buffer ->
@@ -282,12 +291,16 @@ class SettingsActivity : AppCompatActivity(),
                         if (importedBarSettings == null) {
                             imported
                         } else {
-                            imported.toBuilder()
-                                .setHorizontalBarPid(importedBarSettings[0].removePrefix("torque_").uppercase())
-                                .setHorizontalBarTitle(importedBarSettings[1])
-                                .setHorizontalBarMin(importedBarSettings[2])
-                                .setHorizontalBarMax(importedBarSettings[3])
-                                .build()
+                            val pid = importedBarSettings[0].removePrefix("torque_").uppercase()
+                            val min = importedBarSettings[2].toDoubleOrNull() ?: 0.0
+                            val max = importedBarSettings[3].toDoubleOrNull() ?: 100.0
+                            imported.toBuilder().setHorizontalBarDisplay(
+                                Display.newBuilder().setPid("torque_$pid")
+                                    .setLabel(importedBarSettings[1]).setShowLabel(false)
+                                    .setHorizontalMinValue(min)
+                                    .setHorizontalMaxValue(if (max > min) max else min + 100.0)
+                                    .setMinValue(min.toInt()).setMaxValue(max.toInt()).build()
+                            ).build()
                         }
                     }
                     Toast.makeText(baseContext, R.string.file_imported_successfully, Toast.LENGTH_SHORT).show()
