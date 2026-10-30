@@ -22,6 +22,7 @@ class TorqueRefresher {
     private var conWatcher = MutableStateFlow(ConnectStatus.CONNECTING_TORQUE)
     val connectStatus = conWatcher.asSharedFlow()
     val cache = mutableMapOf<Int, HashMap<Int, TorqueData>>()
+    private var scheduledRefreshInterval: Long? = null
 
     companion object {
         @Volatile
@@ -46,8 +47,19 @@ class TorqueRefresher {
 
     suspend fun makeExecutors(service: TorqueService) {
         var foundValid = false
+        val refreshInterval = REFRESH_INTERVAL.coerceAtLeast(1L)
+
+        // A changed preference must also change already-created PID schedules.
+        // Cancel the old timers so sampling and the bar animation use one interval.
+        if (scheduledRefreshInterval != null && scheduledRefreshInterval != refreshInterval) {
+            data.values.forEach { torqueData ->
+                torqueData.stopRefreshing()
+            }
+        }
+        scheduledRefreshInterval = refreshInterval
+
         data.values.forEachIndexed { index, torqueData ->
-            val refreshOffset = (REFRESH_INTERVAL / data.size) * index
+            val refreshOffset = (refreshInterval / data.size) * index
             if (torqueData.pid != null) {
                 foundValid = true
                 if (torqueData.refreshTimer == null) {
@@ -59,7 +71,7 @@ class TorqueRefresher {
                         } catch (e: Exception) {
                             Timber.e("Refresh failed in pos $index", e)
                         }
-                    }, refreshOffset, REFRESH_INTERVAL, TimeUnit.MILLISECONDS)
+                    }, refreshOffset, refreshInterval, TimeUnit.MILLISECONDS)
                 }
             } else {
                 Timber.i("No reason to schedule item in position $index")
