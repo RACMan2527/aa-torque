@@ -53,13 +53,7 @@ class TorqueLoadBar : Fragment() {
     }
 
     private fun formatReading(value: Double): String {
-        return if (value.isFinite()) {
-            if (value == value.roundToInt().toDouble()) {
-                value.roundToInt().toString()
-            } else {
-                String.format(Locale.US, "%.1f", value)
-            }
-        } else "--"
+        return if (value.isFinite()) value.roundToInt().toString() else "--"
     }
 }
 
