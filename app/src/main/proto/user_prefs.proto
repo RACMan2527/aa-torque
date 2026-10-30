@@ -47,6 +47,8 @@ message Display {
   bool highVisActive = 19;
   int32 chartColor = 24;
   repeated Coloring alarms = 26;
+  double horizontalMinValue = 27;
+  double horizontalMaxValue = 28;
 }
 
 message Screen {
