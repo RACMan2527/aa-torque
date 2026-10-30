@@ -99,6 +99,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
             requireContext().getSharedPreferences(
                 "runtime_settings", android.content.Context.MODE_PRIVATE
             ).edit().putBoolean("simulateEcuData", newValue as Boolean).apply()
+            requireContext().sendBroadcast(
+                Intent(com.aatorque.stats.TorqueService.ACTION_SIMULATION_SETTING_CHANGED)
+            )
             true
         }
         val legacyBarSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
