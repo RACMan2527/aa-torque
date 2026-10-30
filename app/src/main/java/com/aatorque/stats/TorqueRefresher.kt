@@ -76,21 +76,11 @@ class TorqueRefresher {
     }
 
     fun doRefresh(service: TorqueService, torqueData: TorqueData) {
-        if (service.torqueService == null) {
-            Timber.w("PID refresh waiting for Torque service: pid=${torqueData.pid}")
-            return
-        }
         service.runIfConnected { ts ->
-            val requestedPid = torqueData.pid ?: return@runIfConnected
             val value = try {
-                val response = ts.getPIDValuesAsDouble(arrayOf(requestedPid))
-                if (response.isEmpty()) {
-                    Timber.w("Torque returned an empty response for PID $requestedPid")
-                    return@runIfConnected
-                }
-                response[0]
-            } catch (e: Exception) {
-                Timber.e(e, "Torque PID read failed for $requestedPid")
+                ts.getPIDValuesAsDouble(arrayOf(torqueData.pid!!))[0]
+            } catch (e: ArrayIndexOutOfBoundsException) {
+                Timber.e("Torque returned invalid data for ${torqueData.pid}")
                 return@runIfConnected
             }
             torqueData.lastData = value
