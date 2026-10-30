@@ -74,7 +74,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             torqueService.loadPidInformation(false) { pids ->
                 activity?.runOnUiThread {
                     availableBarPidEntries = pids.map {
-                        "torque_${it.first.removePrefix("torque_").uppercase()}"
+                        "torque_${it.first.removePrefix("torque_")}"
                     }.toTypedArray()
                     availableBarPidNames = pids.map { it.second[0] }.toTypedArray()
                     updateBarPidChoices()
@@ -135,7 +135,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             if (settings.horizontalBarDisplay.pid.isBlank()) {
                 val legacyPid = settings.horizontalBarPid.ifBlank {
                     legacyBarSettings.getString("pid", "0104") ?: "0104"
-                }.removePrefix("torque_").uppercase()
+                }.removePrefix("torque_")
                 val legacyTitle = settings.horizontalBarTitle.ifBlank {
                     legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
                 }
@@ -159,7 +159,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 }
             }
             val bar = settings.horizontalBarDisplay
-            savedBarPid = bar.pid.removePrefix("torque_").uppercase().ifBlank { "0104" }
+            savedBarPid = bar.pid.removePrefix("torque_").ifBlank { "0104" }
             barTitlePref.text = bar.label.ifBlank { "PID $savedBarPid" }
             barMinPref.text = (if (bar.hasHorizontalMinValue()) bar.horizontalMinValue else bar.minValue.toDouble()).toString()
             barMaxPref.text = (if (bar.hasHorizontalMaxValue()) bar.horizontalMaxValue else bar.maxValue.toDouble()).toString()
@@ -183,7 +183,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             true
         }
         barPidPref.setOnPreferenceChangeListener { _, newValue ->
-            val pid = (newValue as String).removePrefix("torque_").uppercase()
+            val pid = (newValue as String).removePrefix("torque_")
             if (pid.isEmpty()) return@setOnPreferenceChangeListener false
             val previousPid = savedBarPid
             savedBarPid = pid
@@ -370,7 +370,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 TorqueRefresher.REFRESH_INTERVAL = refreshInterval.toLong()
 
                 val bar = it.horizontalBarDisplay
-                savedBarPid = bar.pid.removePrefix("torque_").uppercase().ifBlank { "0104" }
+                savedBarPid = bar.pid.removePrefix("torque_").ifBlank { "0104" }
                 // Do not replace an unavailable saved PID with the first PID
                 // returned by Torque. Preserve the saved selection for reconnect.
                 updateBarPidChoices()
