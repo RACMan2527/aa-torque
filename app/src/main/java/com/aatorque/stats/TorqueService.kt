@@ -17,6 +17,7 @@ class TorqueService {
     val onConnect = ArrayList<(ITorqueService) -> Unit>()
     val conLock = ReentrantLock()
     var hasBound = false
+    private var appContext: Context? = null
 
     fun addConnectCallback(func: (ITorqueService) -> Unit): TorqueService {
         if (torqueService == null) {
@@ -47,9 +48,11 @@ class TorqueService {
         override fun onServiceConnected(arg0: ComponentName, service: IBinder) {
             try {
                 val svc = ITorqueService.Stub.asInterface(service)
-                if (BuildConfig.SIMULATE_METRICS) {
-                    svc.setDebugTestMode(!svc.isConnectedToECU)
-                }
+                val simulateMetrics = BuildConfig.SIMULATE_METRICS ||
+                    (BuildConfig.DEBUG && appContext?.getSharedPreferences(
+                        "runtime_settings", Context.MODE_PRIVATE
+                    )?.getBoolean("simulateEcuData", false) == true)
+                svc.setDebugTestMode(simulateMetrics && !svc.isConnectedToECU)
                 torqueService = svc
                 conLock.withLock {
                     for (funt in onConnect) {
@@ -87,6 +90,7 @@ class TorqueService {
         Timber.i("Torque stop")
     }
     fun startTorque(context: Context): Boolean {
+        appContext = context.applicationContext
         val intent = Intent()
         intent.setClassName("org.prowl.torque", "org.prowl.torque.remote.TorqueService")
         hasBound = context.bindService(intent, torqueConnection, Activity.BIND_AUTO_CREATE)
