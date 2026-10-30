@@ -61,6 +61,10 @@ selectedTheme: "Electro Vehicle"
 selectedFont: "ev"
 selectedBackground: "background_incar_ev"
 centerGaugeLarge: true
+horizontalBarPid: "0104"
+horizontalBarTitle: "PID 0104"
+horizontalBarMin: "0"
+horizontalBarMax: "100"
 """
 
 object UserPreferenceSerializer : Serializer<UserPreference> {
