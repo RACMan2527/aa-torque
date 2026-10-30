@@ -90,6 +90,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
         barTitlePref = findPreference("barTitle")!!
         barMinPref = findPreference("barMin")!!
         barMaxPref = findPreference("barMax")!!
+        val simulateEcuDataPref = findPreference<CheckBoxPreference>("simulateEcuData")!!
+        simulateEcuDataPref.isVisible = com.aatorque.stats.BuildConfig.DEBUG
+        simulateEcuDataPref.isChecked = requireContext().getSharedPreferences(
+            "runtime_settings", android.content.Context.MODE_PRIVATE
+        ).getBoolean("simulateEcuData", false)
+        simulateEcuDataPref.setOnPreferenceChangeListener { _, newValue ->
+            requireContext().getSharedPreferences(
+                "runtime_settings", android.content.Context.MODE_PRIVATE
+            ).edit().putBoolean("simulateEcuData", newValue as Boolean).apply()
+            true
+        }
         val legacyBarSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
         barPidPref.isEnabled = false
         barPidPref.summary = "Loading available Torque PIDs..."
