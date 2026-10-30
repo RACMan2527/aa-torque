@@ -8,6 +8,7 @@ import android.content.ServiceConnection
 import android.os.DeadObjectException
 import android.os.IBinder
 import android.os.Build
+import androidx.core.content.ContextCompat
 import org.prowl.torque.remote.ITorqueService
 import timber.log.Timber
 import java.util.concurrent.locks.ReentrantLock
@@ -113,11 +114,12 @@ class TorqueService {
         appContext = context.applicationContext
         if (!simulationReceiverRegistered) {
             val filter = android.content.IntentFilter(ACTION_SIMULATION_SETTING_CHANGED)
-            if (Build.VERSION.SDK_INT >= 33) {
-                context.registerReceiver(simulationReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                context.registerReceiver(simulationReceiver, filter)
-            }
+            ContextCompat.registerReceiver(
+                context,
+                simulationReceiver,
+                filter,
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
             simulationReceiverRegistered = true
         }
         val intent = Intent()
