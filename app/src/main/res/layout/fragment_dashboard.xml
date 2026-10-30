@@ -113,6 +113,33 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
+            <TextClock
+                android:id="@+id/dashboardClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="60dp"
+                android:format12Hour="h:mm a"
+                android:format24Hour="HH:mm"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <ImageView
+                android:id="@+id/cadillacVSeriesBadge"
+                android:layout_width="92dp"
+                android:layout_height="45dp"
+                android:layout_marginEnd="18dp"
+                android:contentDescription="Cadillac V-Series badge"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cadillac_v_series"
+                android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
             <TextView
                 android:id="@+id/textTitle"
                 android:layout_width="500dp"
