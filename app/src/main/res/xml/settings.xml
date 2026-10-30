@@ -72,6 +72,15 @@
         
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="Development / testing">
+        <CheckBoxPreference
+            android:key="simulateEcuData"
+            android:title="Simulate ECU data"
+            android:summary="Show simulated gauge readings when the app is not connected to an ECU. Values are not live vehicle data."
+            android:defaultValue="false"
+            android:persistent="false" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="Horizontal bar">
         <ListPreference
             android:key="barPid"
