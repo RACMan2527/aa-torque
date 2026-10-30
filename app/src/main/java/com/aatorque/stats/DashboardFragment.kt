@@ -335,31 +335,31 @@ open class DashboardFragment : AlbumArt() {
 
 
     private fun setupConfiguredBar(screenIndex: Int, settings: UserPreference) {
-        // Keep the complete Torque PID identifier, just as the round-gauge
-        // path does. Some Torque identifiers include a comma suffix (for
-        // example, "0C,0"); a hex-only validation silently replaced those
-        // selected PIDs with the default 0104.
-        val barPid = settings.horizontalBarPid
+        // The horizontal bar uses the same persisted Display configuration as
+        // a round gauge. Only its renderer is different.
+        val barDisplay = settings.horizontalBarDisplay
+        val barPid = barDisplay.pid
             .trim()
             .removePrefix("torque_")
             .uppercase()
             .ifBlank { "0104" }
-        val barTitle = settings.horizontalBarTitle.trim().ifEmpty { "PID $barPid" }
-        val barMin = settings.horizontalBarMin.toDoubleOrNull() ?: 0.0
-        val configuredMax = settings.horizontalBarMax.toDoubleOrNull() ?: 100.0
-        val barMax = if (configuredMax > barMin) configuredMax else barMin + 100.0
-        val barDisplay = Display.newBuilder()
+        val configuredDisplay = barDisplay.toBuilder()
             .setPid("torque_$barPid")
-            .setLabel("PID $barPid")
-            .setMinValue(barMin.toInt())
-            .setMaxValue(barMax.toInt())
+            .setLabel(barDisplay.label.ifBlank { "PID $barPid" })
+            .setMinValue(barDisplay.minValue)
+            .setMaxValue(if (barDisplay.maxValue > barDisplay.minValue) barDisplay.maxValue else barDisplay.minValue + 100)
             .setShowLabel(false)
             .build()
-        val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
-            torqueRefresher.populateQuery(7, screenIndex, barDisplay)
+        val barData = if (torqueRefresher.hasChanged(7, configuredDisplay)) {
+            torqueRefresher.populateQuery(7, screenIndex, configuredDisplay)
         } else torqueRefresher.data[7]!!
         barData.allowInitialZeroUpdates = true
-        loadBar.setupBar(barData, barMin, barMax, barTitle)
+        loadBar.setupBar(
+            barData,
+            configuredDisplay.minValue.toDouble(),
+            configuredDisplay.maxValue.toDouble(),
+            configuredDisplay.label.ifBlank { "PID $barPid" }
+        )
     }
 
     fun setScreen(direction: Int) {
