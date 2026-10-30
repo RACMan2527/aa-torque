@@ -86,7 +86,7 @@ class EngineLoadBarView @JvmOverloads constructor(
     private val maxMarkerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = maxMarkerColor
         style = Paint.Style.FILL
-        setShadowLayer(3f * density, 0f, 0f, maxMarkerColor)
+        setShadowLayer(5f * density, 0f, 0f, maxMarkerColor)
     }
     private val maxMarkerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = maxMarkerColor
@@ -108,8 +108,8 @@ class EngineLoadBarView @JvmOverloads constructor(
         textAlign = Paint.Align.CENTER
     }
     private val cornerRadius = 2f * density
-    private val maxMarkerWidth = 9f * density
-    private val maxMarkerHeight = 7f * density
+    private val maxMarkerWidth = 13f * density
+    private val maxMarkerHeight = 10f * density
     private var reading = 0f
     private var peak = Float.NEGATIVE_INFINITY
     private var minimum = 0f
