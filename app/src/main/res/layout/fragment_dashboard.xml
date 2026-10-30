@@ -316,7 +316,7 @@
                     android:layout_height="0dp"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
-                    android:translationY="@{minMaxBelow ? -173 : -98}"
+                    android:translationY="@{minMaxBelow ? -164 : -89}"
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display2 : @id/line50}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display2  : @id/line25}"
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display2 : LayoutParams.UNSET}"
@@ -334,7 +334,7 @@
                     
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
-                    android:translationY="@{minMaxBelow ? -164 : -89}"/>
+                    android:translationY="@{minMaxBelow ? -155 : -80}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"
