@@ -350,8 +350,10 @@ open class DashboardFragment : AlbumArt() {
             .setShowLabel(false)
             .build()
         val barData = if (torqueRefresher.hasChanged(7, barDisplay)) {
+            Timber.i("Horizontal bar PID changed/configured: pid=${barDisplay.pid}, screen=$screenIndex")
             torqueRefresher.populateQuery(7, screenIndex, barDisplay)
         } else torqueRefresher.data[7]!!
+        Timber.i("Horizontal bar setup: savedPid=${settings.horizontalBarPid}, displayPid=${barData.pid}, title=$barTitle")
         barData.allowInitialZeroUpdates = true
         loadBar.setupBar(barData, barMin, barMax, barTitle)
     }
