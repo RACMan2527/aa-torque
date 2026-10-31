@@ -70,10 +70,6 @@ class EngineLoadBarView @JvmOverloads constructor(
         color = 0xFF4B4B4B.toInt()
         style = Paint.Style.FILL
     }
-    private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFE53935.toInt()
-        style = Paint.Style.FILL
-    }
     private val maxMarkerColor: Int = context.theme.obtainStyledAttributes(
         intArrayOf(R.attr.themedNeedleColor)
     ).let { attributes ->
@@ -82,6 +78,10 @@ class EngineLoadBarView @JvmOverloads constructor(
         } finally {
             attributes.recycle()
         }
+    }
+    private val progressPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = maxMarkerColor
+        style = Paint.Style.FILL
     }
     private val maxMarkerGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = maxMarkerColor
@@ -93,17 +93,17 @@ class EngineLoadBarView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFBDBDBD.toInt()
+        color = 0xFFF5F5F5.toInt()
         strokeWidth = max(2f, 2f * density)
         style = Paint.Style.STROKE
     }
     private val minorTickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF888888.toInt()
+        color = 0xFFBDBDBD.toInt()
         strokeWidth = max(1f, 1f * density)
         style = Paint.Style.STROKE
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFFD5D5D5.toInt()
+        color = 0xFFFFFFFF.toInt()
         textSize = 16f * density
         textAlign = Paint.Align.CENTER
     }
