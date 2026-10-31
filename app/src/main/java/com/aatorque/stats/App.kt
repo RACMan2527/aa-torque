@@ -2,6 +2,9 @@ package com.aatorque.stats
 
 import android.app.Application
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.acra.config.mailSender
 import org.acra.config.toast
 import org.acra.data.StringFormat
@@ -10,6 +13,9 @@ import timber.log.Timber
 
 
 class App : Application() {
+
+    // Settings writes must survive a PreferenceFragment being closed immediately.
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val logTree = CacheLogTree()
 

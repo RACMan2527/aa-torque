@@ -102,7 +102,7 @@
                 android:layout_height="wrap_content"
                 android:padding="5dp"
                 android:layout_marginBottom="5dp"
-                android:visibility="@{status == 0 ? View.INVISIBLE : View.VISIBLE}"
+                android:visibility="@{status == 0 ? View.GONE : View.VISIBLE}"
                 android:text='@{status == 0 ? "" : context.getString(status)}'
                 android:textAlignment="center"
                 android:textColor="@android:color/white"
@@ -112,6 +112,33 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
+
+            <TextClock
+                android:id="@+id/dashboardClock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="30dp"
+                android:format12Hour="h:mm a"
+                android:format24Hour="HH:mm"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/textTitle"
+                 />
+
+            <ImageView
+                android:id="@+id/cadillacVSeriesBadge"
+                android:layout_width="120dp"
+                android:layout_height="59dp"
+                android:layout_marginEnd="18dp"
+                android:contentDescription="Cadillac V-Series badge"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cadillac_v_series"
+                android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@id/textTitle"
+                 />
 
             <TextView
                 android:id="@+id/textTitle"
@@ -124,9 +151,10 @@
                 android:textColor="@android:color/white"
                 android:textSize="30sp"
                 android:typeface="@{font}"
+                android:visibility="@{status == 0 ? View.VISIBLE : View.GONE}"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/con_status" />
+                app:layout_constraintTop_toTopOf="parent" />
 
             <ImageButton
                 android:id="@+id/chartBtn"
@@ -225,8 +253,9 @@
                     app:layout_constraintLeft_toLeftOf="parent"
                     app:layout_constraintRight_toLeftOf="@id/guideline1"
                     app:layout_constraintTop_toTopOf="parent"
+                    android:translationY="18dp"
                     app:alpha="@{gaugeAlpha}"
-                    app:layout_constraintBottom_toBottomOf="parent" />
+                    app:layout_constraintBottom_toTopOf="@id/loadBar" />
 
 
                 <androidx.fragment.app.FragmentContainerView
@@ -239,10 +268,11 @@
                     android:layout="@layout/fragment_gauge"
                     app:layout_constrainedHeight="false"
                     app:layout_constrainedWidth="true"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintBottom_toTopOf="@id/loadBar"
                     app:layout_constraintLeft_toRightOf="@id/guideline1"
                     app:layout_constraintRight_toLeftOf="@+id/guideline2"
                     app:layout_constraintTop_toTopOf="parent"
+                    android:translationY="18dp"
                     android:visibility="@{!showChart ? View.VISIBLE : View.GONE}"
                     android:scaleX="@{largeCenter ? 1.1f : 1f}"
                     android:scaleY="@{largeCenter ? 1.1f : 1f}"
@@ -258,11 +288,24 @@
                     app:layout_constrainedHeight="false"
                     app:layout_constrainedWidth="true"
                     android:visibility="@{!showChart ? View.VISIBLE : View.GONE}"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintBottom_toTopOf="@id/loadBar"
                     app:layout_constraintLeft_toRightOf="@+id/guideline2"
                     app:layout_constraintRight_toRightOf="parent"
                     app:alpha="@{gaugeAlpha}"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="parent"
+                    android:translationY="18dp" />
+
+                <androidx.fragment.app.FragmentContainerView
+                    android:id="@+id/loadBar"
+                    android:name="com.aatorque.stats.TorqueLoadBar"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout="@layout/fragment_load_bar"
+                    android:elevation="3dp"
+                    android:visibility="@{!showChart ? View.VISIBLE : View.GONE}"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent" />
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display1"
@@ -276,7 +319,9 @@
                     app:layout_constraintLeft_toRightOf="@{showChart ? @id/chartFrag : @id/line25}"
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/dashContent : LayoutParams.UNSET}"
                     app:layout_constraintTop_toTopOf="@{showChart ? @id/chartFrag : @id/horizTop}"
-                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display2 : LayoutParams.UNSET}" />
+                    app:layout_constraintBottom_toTopOf="@{showChart ? @id/display2 : LayoutParams.UNSET}" 
+                    
+                    android:translationY="0dp"/>
 
                 <androidx.fragment.app.FragmentContainerView
                     android:id="@+id/display2"
@@ -298,7 +343,7 @@
                     android:layout_height="0dp"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
-                    android:translationY="@{minMaxBelow ? -75 : 0}"
+                    android:translationY="@{minMaxBelow ? -100 : -50}"
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display2 : @id/line50}"
                     app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display2  : @id/line25}"
                     app:layout_constraintTop_toBottomOf="@{showChart ? @id/display2 : LayoutParams.UNSET}"
@@ -308,13 +353,15 @@
                     android:id="@+id/display4"
                     android:name="com.aatorque.stats.TorqueDisplay"
                     android:layout_width="wrap_content"
-                    android:layout_height="0dp"
+                    android:layout_height="wrap_content"
                     android:layout="@layout/fragment_display"
                     android:clipChildren="false"
-                    android:translationY="@{minMaxBelow ? -75 : 0}"
+                    
                     app:layout_constraintBottom_toBottomOf="@{showChart ? @id/chartFrag : @id/horizBottom}"
+                    
                     app:layout_constraintRight_toRightOf="@{showChart ? @id/display3 : @id/line75}"
-                    app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"/>
+                    app:layout_constraintLeft_toLeftOf="@{showChart ? @id/display3 : @id/line50}"
+                    android:translationY="@{minMaxBelow ? -100 : -50}"/>
 
                 <androidx.constraintlayout.widget.Guideline
                     android:id="@+id/horizTop"

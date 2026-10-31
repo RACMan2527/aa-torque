@@ -1,8 +1,11 @@
 package com.aatorque.prefs
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.provider.Settings
 import android.text.InputType
 import androidx.lifecycle.lifecycleScope
@@ -14,13 +17,16 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import com.aatorque.datastore.UserPreference
+import com.aatorque.datastore.Display
 import com.aatorque.stats.NotiService
 import com.aatorque.stats.TorqueRefresher
+import com.aatorque.stats.TorqueServiceWrapper
 import com.aatorque.stats.R
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.Collections
@@ -38,6 +44,50 @@ class SettingsFragment : PreferenceFragmentCompat() {
     lateinit var darkenArtPref: SeekBarPreference
     lateinit var blurArtPref: SeekBarPreference
     lateinit var refreshIntervalPref: SeekBarPreference
+    lateinit var barPidPref: ListPreference
+    lateinit var barTitlePref: EditTextPreference
+    private var barTorqueBound = false
+    private var savedBarPid = "0104"
+    private var availableBarPidEntries: Array<String> = emptyArray()
+    private var availableBarPidNames: Array<String> = emptyArray()
+
+    // Rebuild the list only after combining Torque's available PIDs with the
+    // persisted selection. This avoids losing the saved PID when the service
+    // responds before DataStore has finished loading.
+    private fun updateBarPidChoices() {
+        val wanted = "torque_$savedBarPid"
+        val values = availableBarPidEntries.toMutableList()
+        val names = availableBarPidNames.toMutableList()
+        if (wanted !in values) {
+            values.add(0, wanted)
+            names.add(0, "PID $savedBarPid (saved, unavailable)")
+        }
+        barPidPref.entries = names.toTypedArray()
+        barPidPref.entryValues = values.toTypedArray()
+        barPidPref.value = wanted
+        barPidPref.isEnabled = values.isNotEmpty()
+    }
+
+    private val barTorqueConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName, service: IBinder) {
+            val torqueService = (service as TorqueServiceWrapper.LocalBinder).getService()
+            torqueService.loadPidInformation(false) { pids ->
+                activity?.runOnUiThread {
+                    availableBarPidEntries = pids.map {
+                        "torque_${it.first.removePrefix("torque_")}"
+                    }.toTypedArray()
+                    availableBarPidNames = pids.map { it.second[0] }.toTypedArray()
+                    updateBarPidChoices()
+                }
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName) {
+            barTorqueBound = false
+        }
+    }
+    lateinit var barMinPref: EditTextPreference
+    lateinit var barMaxPref: EditTextPreference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +104,140 @@ class SettingsFragment : PreferenceFragmentCompat() {
         blurArtPref = findPreference("blurArtwork")!!
         darkenArtPref = findPreference("darkenArtwork")!!
         refreshIntervalPref = findPreference("refreshIntervalMs")!!
+        barPidPref = findPreference("barPid")!!
+        barTitlePref = findPreference("barTitle")!!
+        barMinPref = findPreference("barMin")!!
+        barMaxPref = findPreference("barMax")!!
+        val simulateEcuDataPref = findPreference<CheckBoxPreference>("simulateEcuData")!!
+        simulateEcuDataPref.isVisible = com.aatorque.stats.BuildConfig.DEBUG
+        simulateEcuDataPref.isChecked = requireContext().getSharedPreferences(
+            "runtime_settings", android.content.Context.MODE_PRIVATE
+        ).getBoolean("simulateEcuData", false)
+        simulateEcuDataPref.setOnPreferenceChangeListener { _, newValue ->
+            requireContext().getSharedPreferences(
+                "runtime_settings", android.content.Context.MODE_PRIVATE
+            ).edit().putBoolean("simulateEcuData", newValue as Boolean).apply()
+            requireContext().sendBroadcast(
+                Intent(com.aatorque.stats.TorqueService.ACTION_SIMULATION_SETTING_CHANGED)
+                    .setPackage(requireContext().packageName)
+            )
+            true
+        }
+        val legacyBarSettings = requireContext().getSharedPreferences("horizontal_bar_settings", android.content.Context.MODE_PRIVATE)
+        barPidPref.isEnabled = false
+        barPidPref.summary = "Loading available Torque PIDs..."
+        barPidPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
+        barMinPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
+        barMaxPref.setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED }
+
+        lifecycleScope.launch {
+            var settings = requireContext().dataStore.data.first()
+            if (settings.horizontalBarDisplay.pid.isBlank()) {
+                val legacyPid = settings.horizontalBarPid.ifBlank {
+                    legacyBarSettings.getString("pid", "0104") ?: "0104"
+                }.removePrefix("torque_")
+                val legacyTitle = settings.horizontalBarTitle.ifBlank {
+                    legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
+                }
+                val legacyMin = settings.horizontalBarMin.toDoubleOrNull()
+                    ?: legacyBarSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                val legacyMax = settings.horizontalBarMax.toDoubleOrNull()
+                    ?: legacyBarSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+                settings = requireContext().dataStore.updateData { current ->
+                    if (current.horizontalBarDisplay.pid.isNotBlank()) current
+                    else current.toBuilder().setHorizontalBarDisplay(
+                        Display.newBuilder()
+                            .setPid("torque_$legacyPid")
+                            .setLabel(legacyTitle)
+                            .setShowLabel(false)
+                            .setHorizontalMinValue(legacyMin)
+                            .setHorizontalMaxValue(if (legacyMax > legacyMin) legacyMax else legacyMin + 100.0)
+                            .setMinValue(legacyMin.toInt())
+                            .setMaxValue(legacyMax.toInt())
+                            .build()
+                    ).build()
+                }
+            }
+            val bar = settings.horizontalBarDisplay
+            savedBarPid = bar.pid.removePrefix("torque_").ifBlank { "0104" }
+            barTitlePref.text = bar.label.ifBlank { "PID $savedBarPid" }
+            barMinPref.text = (if (bar.hasHorizontalMinValue()) bar.horizontalMinValue else bar.minValue.toDouble()).toString()
+            barMaxPref.text = (if (bar.hasHorizontalMaxValue()) bar.horizontalMaxValue else bar.maxValue.toDouble()).toString()
+            barTitlePref.summary = "Current: ${barTitlePref.text}"
+            barMinPref.summary = "Current: ${barMinPref.text}"
+            barMaxPref.summary = "Current: ${barMaxPref.text}"
+        }
+
+        barTitlePref.setOnPreferenceChangeListener { pref, newValue ->
+            val title = (newValue as String).trim()
+            if (title.isEmpty()) return@setOnPreferenceChangeListener false
+            val appContext = requireContext().applicationContext
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                appContext.dataStore.updateData { current ->
+                current.toBuilder().setHorizontalBarDisplay(
+                    current.horizontalBarDisplay.toBuilder().setLabel(title)
+                ).build()
+            }
+            }
+            pref.summary = "Current: $title"
+            true
+        }
+        barPidPref.setOnPreferenceChangeListener { _, newValue ->
+            val pid = (newValue as String).removePrefix("torque_")
+            if (pid.isEmpty()) return@setOnPreferenceChangeListener false
+            val previousPid = savedBarPid
+            savedBarPid = pid
+            updateBarPidChoices()
+            val appContext = requireContext().applicationContext
+            // Commit the selected PID before accepting the preference change.
+            // This guarantees an immediate export or app exit cannot overtake the write.
+            kotlinx.coroutines.runBlocking {
+                appContext.dataStore.updateData { current ->
+                    val bar = current.horizontalBarDisplay.toBuilder().setPid("torque_$pid")
+                    // Keep the generated title in sync with PID changes, but preserve a
+                    // title the user has explicitly customized.
+                    if (current.horizontalBarDisplay.label.isBlank() ||
+                        current.horizontalBarDisplay.label == "PID $previousPid") {
+                        bar.setLabel("PID $pid")
+                    }
+                    current.toBuilder().setHorizontalBarDisplay(bar).build()
+                }
+            }
+            true
+        }
+        barMinPref.setOnPreferenceChangeListener { pref, newValue ->
+            val minText = (newValue as String).trim()
+            val min = minText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
+            val max = barMaxPref.text?.toDoubleOrNull() ?: 100.0
+            if (!min.isFinite() || min >= max) return@setOnPreferenceChangeListener false
+            val appContext = requireContext().applicationContext
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                appContext.dataStore.updateData { current ->
+                    val bar = current.horizontalBarDisplay.toBuilder()
+                        .setHorizontalMinValue(min).setMinValue(min.toInt())
+                    current.toBuilder().setHorizontalBarDisplay(bar).build()
+                }
+            }
+            pref.summary = "Current: $minText"
+            true
+        }
+        barMaxPref.setOnPreferenceChangeListener { pref, newValue ->
+            val maxText = (newValue as String).trim()
+            val max = maxText.toDoubleOrNull() ?: return@setOnPreferenceChangeListener false
+            val min = barMinPref.text?.toDoubleOrNull() ?: 0.0
+            if (!max.isFinite() || max <= min) return@setOnPreferenceChangeListener false
+            val appContext = requireContext().applicationContext
+            (requireActivity().application as com.aatorque.stats.App).applicationScope.launch {
+                appContext.dataStore.updateData { current ->
+                    val bar = current.horizontalBarDisplay.toBuilder()
+                        .setHorizontalMaxValue(max).setMaxValue(max.toInt())
+                    current.toBuilder().setHorizontalBarDisplay(bar).build()
+                }
+            }
+            pref.summary = "Current: $maxText"
+            true
+        }
+        barTorqueBound = TorqueServiceWrapper.runStartIntent(requireContext(), barTorqueConnection)
         themePref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         fontPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
         backgroundPref.summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
@@ -184,6 +368,18 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 
                 refreshIntervalPref.value = refreshInterval
                 TorqueRefresher.REFRESH_INTERVAL = refreshInterval.toLong()
+
+                val bar = it.horizontalBarDisplay
+                savedBarPid = bar.pid.removePrefix("torque_").ifBlank { "0104" }
+                // Do not replace an unavailable saved PID with the first PID
+                // returned by Torque. Preserve the saved selection for reconnect.
+                updateBarPidChoices()
+                barTitlePref.text = bar.label.ifBlank { "PID $savedBarPid" }
+                barMinPref.text = (if (bar.hasHorizontalMinValue()) bar.horizontalMinValue else bar.minValue.toDouble()).toString()
+                barMaxPref.text = (if (bar.hasHorizontalMaxValue()) bar.horizontalMaxValue else bar.maxValue.toDouble()).toString()
+                barTitlePref.summary = "Current: ${barTitlePref.text}"
+                barMinPref.summary = "Current: ${barMinPref.text}"
+                barMaxPref.summary = "Current: ${barMaxPref.text}"
             }
         }
         lifecycleScope.launch {
@@ -224,5 +420,17 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onStart() {
         super.onStart()
         (requireActivity() as SettingsActivity).supportActionBar!!.subtitle = null
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (barTorqueBound) {
+            try {
+                requireContext().unbindService(barTorqueConnection)
+            } catch (e: IllegalArgumentException) {
+                Timber.e("Failed to unbind Torque PID service", e)
+            }
+            barTorqueBound = false
+        }
     }
 }

@@ -28,6 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.aatorque.datastore.UserPreference
+import com.aatorque.datastore.Display
 import com.aatorque.stats.App
 import com.aatorque.stats.BuildConfig
 import com.aatorque.stats.CreditsFragment
@@ -40,6 +41,10 @@ import kotlinx.coroutines.launch
 import org.json.JSONException
 import org.json.JSONObject
 import timber.log.Timber
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.io.IOException
 import java.net.ConnectException
 import java.net.HttpURLConnection
@@ -205,15 +210,50 @@ class SettingsActivity : AppCompatActivity(),
     }
 
     private val exportFileLauncher = registerForActivityResult(ExportFileContract()) { uri: Uri? ->
-        // This lambda will be executed when the activity result returns
         lifecycleScope.launch(Dispatchers.IO) {
-            val data = applicationContext.dataStore.data.first()
-            val result = if (uri != null) {
-                contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    UserPreferenceSerializer.writeTo(data, outputStream)
+            val result = try {
+                if (uri == null) {
+                    R.string.export_failed
+                } else {
+                    val data = applicationContext.dataStore.updateData { current ->
+                        if (current.horizontalBarDisplay.pid.isNotBlank()) current
+                        else {
+                            val legacyBarSettings = getSharedPreferences(HORIZONTAL_BAR_SETTINGS, Context.MODE_PRIVATE)
+                            val pid = current.horizontalBarPid.ifBlank {
+                                legacyBarSettings.getString("pid", "0104") ?: "0104"
+                            }.removePrefix("torque_").uppercase()
+                            val title = current.horizontalBarTitle.ifBlank {
+                                legacyBarSettings.getString("title", "PID $pid") ?: "PID $pid"
+                            }
+                            val min = current.horizontalBarMin.toDoubleOrNull()
+                                ?: legacyBarSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                            val max = current.horizontalBarMax.toDoubleOrNull()
+                                ?: legacyBarSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+                            current.toBuilder().setHorizontalBarDisplay(
+                                Display.newBuilder().setPid("torque_$pid").setLabel(title)
+                                    .setShowLabel(false).setHorizontalMinValue(min)
+                                    .setHorizontalMaxValue(if (max > min) max else min + 100.0)
+                                    .setMinValue(min.toInt()).setMaxValue(max.toInt()).build()
+                            ).build()
+                        }
+                    }
+                    if (data.horizontalBarDisplay.pid.isBlank()) {
+                        throw IOException("Horizontal gauge PID is not saved. Select a PID before exporting.")
+                    }
+                    val protobufBytes = ByteArrayOutputStream().use { buffer ->
+                        UserPreferenceSerializer.writeTo(data, buffer)
+                        buffer.toByteArray()
+                    }
+                    val outputStream = contentResolver.openOutputStream(uri)
+                        ?: throw IOException("Could not open selected export destination")
+                    outputStream.use { stream ->
+                        stream.write(protobufBytes)
+                        stream.flush()
+                    }
+                    R.string.file_exported_successfully
                 }
-                R.string.file_exported_successfully
-            } else {
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to export dashboard settings")
                 R.string.export_failed
             }
             runOnUiThread {
@@ -225,16 +265,70 @@ class SettingsActivity : AppCompatActivity(),
 
     private val importFileLauncher = registerForActivityResult(ImportFileContract()) { uri: Uri? ->
         if (uri != null) {
-            val inStream = contentResolver.openInputStream(uri)
             this@SettingsActivity.lifecycleScope.launch {
                 try {
-                    this@SettingsActivity.applicationContext.dataStore.updateData {
-                        return@updateData UserPreference.parseFrom(inStream)
+                    val inputBytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        ?: throw IOException("Could not open selected settings file")
+                    val hasBarSettings = inputBytes.size >= EXPORT_MAGIC.size &&
+                        inputBytes.copyOfRange(0, EXPORT_MAGIC.size).contentEquals(EXPORT_MAGIC)
+                    val protobufBytes: ByteArray
+                    val importedBarSettings: List<String>?
+                    if (hasBarSettings) {
+                        DataInputStream(ByteArrayInputStream(inputBytes, EXPORT_MAGIC.size, inputBytes.size - EXPORT_MAGIC.size)).use { input ->
+                            val protobufSize = input.readInt()
+                            if (protobufSize < 0 || protobufSize > input.available()) {
+                                throw IOException("Invalid dashboard settings export")
+                            }
+                            protobufBytes = ByteArray(protobufSize).also(input::readFully)
+                            importedBarSettings = listOf(
+                                input.readUTF(), input.readUTF(), input.readUTF(), input.readUTF()
+                            )
+                        }
+                    } else {
+                        // Keep compatibility with existing dashboards.pb exports.
+                        protobufBytes = inputBytes
+                        importedBarSettings = null
                     }
-                } catch (e: InvalidProtocolBufferException) {
+                    this@SettingsActivity.applicationContext.dataStore.updateData {
+                        val imported = UserPreference.parseFrom(ByteArrayInputStream(protobufBytes))
+                        if (importedBarSettings == null) {
+                            // Current protobuf exports carry the horizontal PID in field 33.
+                            // Older exports may only have the legacy fields 29-32.
+                            if (imported.horizontalBarDisplay.pid.isNotBlank()) {
+                                imported
+                            } else {
+                                val pid = imported.horizontalBarPid.removePrefix("torque_")
+                                    .uppercase().ifBlank { "0104" }
+                                val title = imported.horizontalBarTitle.ifBlank { "PID $pid" }
+                                val min = imported.horizontalBarMin.toDoubleOrNull() ?: 0.0
+                                val max = imported.horizontalBarMax.toDoubleOrNull() ?: 100.0
+                                imported.toBuilder().setHorizontalBarDisplay(
+                                    Display.newBuilder().setPid("torque_$pid")
+                                        .setLabel(title).setShowLabel(false)
+                                        .setHorizontalMinValue(min)
+                                        .setHorizontalMaxValue(if (max > min) max else min + 100.0)
+                                        .setMinValue(min.toInt()).setMaxValue(max.toInt()).build()
+                                ).build()
+                            }
+                        } else {
+                            val pid = importedBarSettings[0].removePrefix("torque_").uppercase()
+                            val min = importedBarSettings[2].toDoubleOrNull() ?: 0.0
+                            val max = importedBarSettings[3].toDoubleOrNull() ?: 100.0
+                            imported.toBuilder().setHorizontalBarDisplay(
+                                Display.newBuilder().setPid("torque_$pid")
+                                    .setLabel(importedBarSettings[1]).setShowLabel(false)
+                                    .setHorizontalMinValue(min)
+                                    .setHorizontalMaxValue(if (max > min) max else min + 100.0)
+                                    .setMinValue(min.toInt()).setMaxValue(max.toInt()).build()
+                            ).build()
+                        }
+                    }
+                    Toast.makeText(baseContext, R.string.file_imported_successfully, Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to import dashboard settings")
                     Toast.makeText(
                         baseContext,
-                        R.string.invalid_settings,
+                        if (e is InvalidProtocolBufferException) R.string.invalid_settings else R.string.export_failed,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -434,6 +528,8 @@ class SettingsActivity : AppCompatActivity(),
         private const val REQUEST_PERMISSIONS = 0
         private const val PERMISSION_CAR_VENDOR_EXTENSION =
             "com.google.android.gms.permission.CAR_VENDOR_EXTENSION"
+        private val EXPORT_MAGIC = "AATORQUE_SETTINGS_V2\\n".toByteArray(Charsets.UTF_8)
+        private const val HORIZONTAL_BAR_SETTINGS = "horizontal_bar_settings"
         const val EXPORT_MIME = "application/octet-stream"
     }
 }

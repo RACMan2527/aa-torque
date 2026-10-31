@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingStart="7dp"
+    android:paddingEnd="7dp"
+    android:paddingTop="1dp"
+    android:paddingBottom="1dp"
+    android:background="@drawable/bg_engine_load_frame">
+
+    <TextView
+        android:id="@+id/loadBarTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PID 0104"
+        android:textColor="#D5D5D5"
+        android:textSize="18sp"
+        android:letterSpacing="0.12"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/engineLoadValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="--"
+        android:textColor="#F4F4F4"
+        android:textSize="22sp"
+        android:fontFamily="sans-serif-condensed"
+        android:includeFontPadding="false"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.aatorque.stats.EngineLoadBarView
+        android:id="@+id/engineLoadGauge"
+        android:layout_width="0dp"
+        android:layout_height="23dp"
+        android:layout_marginTop="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/loadBarTitle"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

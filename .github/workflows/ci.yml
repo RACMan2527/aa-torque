@@ -21,8 +21,19 @@ jobs:
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*') }}
 
-      - name: Build Release apk
+      - name: Lint Release
         run: echo "" >> ./local.properties && ./gradlew lintRelease
+
+      - name: Build Android Auto test APK
+        run: ./gradlew assembleDebug
+
+      - name: Publish Android Auto test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: V-Sport-Gauges-TEST-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
 
   build_deploy:
     runs-on: ubuntu-latest
@@ -70,16 +81,16 @@ jobs:
         if: github.repository == 'agronick/aa-torque'
         run: >
           echo "" >> ./local.properties &&
-          ./gradlew assembleRelease 
-          -Pandroid.injected.signing.store.file=$HOME/debug.keystore 
-          -Pandroid.injected.signing.key.alias=androiddebugkey 
-          -Pandroid.injected.signing.store.password=android 
+          ./gradlew assembleRelease
+          -Pandroid.injected.signing.store.file=$HOME/debug.keystore
+          -Pandroid.injected.signing.key.alias=androiddebugkey
+          -Pandroid.injected.signing.store.password=android
           -Pandroid.injected.signing.key.password=android
 
       - name: Build Release apk for forked repos
         if: github.repository != 'agronick/aa-torque'
         run: >
-           echo "" >> ./local.properties && ./gradlew assembleRelease 
+           echo "" >> ./local.properties && ./gradlew assembleRelease
 
       - name: Rename release
         run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/v-sport-gauges.apk

@@ -47,6 +47,8 @@ message Display {
   bool highVisActive = 19;
   int32 chartColor = 24;
   repeated Coloring alarms = 26;
+  optional double horizontalMinValue = 27;
+  optional double horizontalMaxValue = 28;
 }
 
 message Screen {
@@ -70,4 +72,9 @@ message UserPreference {
   uint32 blurArt = 26;
   uint32 darkenArt = 27;
   uint32 refreshIntervalMs = 28;
+  string horizontalBarPid = 29;
+  string horizontalBarTitle = 30;
+  string horizontalBarMin = 31;
+  string horizontalBarMax = 32;
+  Display horizontalBarDisplay = 33;
 }

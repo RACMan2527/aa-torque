@@ -30,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.aatorque.datastore.UserPreference
+import com.aatorque.datastore.Display
 import com.aatorque.prefs.SettingsViewModel
 import com.aatorque.prefs.dataStore
 import com.aatorque.stats.databinding.FragmentDashboardBinding
@@ -37,6 +38,7 @@ import com.aatorque.utils.CountDownLatch
 import com.google.android.apps.auto.sdk.StatusBarController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -64,6 +66,8 @@ open class DashboardFragment : AlbumArt() {
     private var mStarted = false
     lateinit var binding: FragmentDashboardBinding
     lateinit var torqueChart: TorqueChart
+    private lateinit var loadBar: TorqueLoadBar
+
     lateinit var settingsViewModel: SettingsViewModel
 
     val viewReady = CountDownLatch(1)
@@ -117,6 +121,36 @@ open class DashboardFragment : AlbumArt() {
         }
         registerWithView {
             data -> data.collect {
+                if (it.horizontalBarDisplay.pid.isBlank()) {
+                    val legacyBarSettings = context.getSharedPreferences("horizontal_bar_settings", Context.MODE_PRIVATE)
+                    val legacyPid = it.horizontalBarPid.ifBlank {
+                        legacyBarSettings.getString("pid", "0104") ?: "0104"
+                    }.removePrefix("torque_").uppercase()
+                    val legacyTitle = it.horizontalBarTitle.ifBlank {
+                        legacyBarSettings.getString("title", "PID $legacyPid") ?: "PID $legacyPid"
+                    }
+                    val legacyMin = it.horizontalBarMin.toDoubleOrNull()
+                        ?: legacyBarSettings.getString("min", "0")?.toDoubleOrNull() ?: 0.0
+                    val legacyMax = it.horizontalBarMax.toDoubleOrNull()
+                        ?: legacyBarSettings.getString("max", "100")?.toDoubleOrNull() ?: 100.0
+                    lifecycleScope.launch {
+                        context.dataStore.updateData { current ->
+                            if (current.horizontalBarDisplay.pid.isNotBlank()) current
+                            else current.toBuilder().setHorizontalBarDisplay(
+                                Display.newBuilder()
+                                    .setPid("torque_$legacyPid")
+                                    .setLabel(legacyTitle)
+                                    .setShowLabel(false)
+                                    .setHorizontalMinValue(legacyMin)
+                                    .setHorizontalMaxValue(if (legacyMax > legacyMin) legacyMax else legacyMin + 100.0)
+                                    .setMinValue(legacyMin.toInt())
+                                    .setMaxValue(legacyMax.toInt())
+                                    .build()
+                            ).build()
+                        }
+                    }
+                    return@collect
+                }
                 val screenIndex = abs(it.currentScreen) % it.screensCount
                 val screens = it.screensList[screenIndex]
                 val showChartChanged = binding.showChart != it.showChart
@@ -142,6 +176,7 @@ open class DashboardFragment : AlbumArt() {
                         }
                     }
                 }
+                setupConfiguredBar(screenIndex, it)
                 screens.displaysList.forEachIndexed { index, display ->
                     if (torqueRefresher.hasChanged(index + DISPLAY_OFFSET, display)) {
                         val td = torqueRefresher.populateQuery(
@@ -209,7 +244,7 @@ open class DashboardFragment : AlbumArt() {
                     ConnectStatus.CONNECTING_TORQUE -> R.string.status_connecting_torque
                     ConnectStatus.CONNECTING_ECU -> R.string.status_connecting_to_ecu
                     ConnectStatus.SETUP_GAUGE -> R.string.status_setup_gauges
-                    ConnectStatus.CONNECTED -> null
+                    ConnectStatus.CONNECTED -> 0
                 }
             }
         }
@@ -257,6 +292,7 @@ open class DashboardFragment : AlbumArt() {
         displays[2]!!.isBottomDisplay = true
         displays[3]!!.isBottomDisplay = true
         torqueChart = childFragmentManager.findFragmentById(R.id.chartFrag)!! as TorqueChart
+        loadBar = childFragmentManager.findFragmentById(R.id.loadBar)!! as TorqueLoadBar
         val filter = IntentFilter().apply { addAction("KEY_DOWN") }
         LocalBroadcastManager.getInstance(requireContext())
             .registerReceiver(object : BroadcastReceiver() {
@@ -306,6 +342,29 @@ open class DashboardFragment : AlbumArt() {
         return rootView
     }
 
+
+    private fun setupConfiguredBar(screenIndex: Int, settings: UserPreference) {
+        // The horizontal bar uses the same persisted Display configuration as
+        // a round gauge. Only its renderer is different.
+        val barDisplay = settings.horizontalBarDisplay
+        // Match the round gauges: pass the saved Display, including its exact
+        // Torque PID identifier, straight through to TorqueRefresher.
+        // The horizontal bar changes only the renderer, not PID construction.
+        val configuredDisplay = barDisplay.toBuilder()
+            .setShowLabel(false)
+            .build()
+        val barPid = configuredDisplay.pid.removePrefix("torque_")
+        val barData = if (torqueRefresher.hasChanged(7, configuredDisplay)) {
+            torqueRefresher.populateQuery(7, screenIndex, configuredDisplay)
+        } else torqueRefresher.data[7]!!
+        barData.allowInitialZeroUpdates = true
+        loadBar.setupBar(
+            barData,
+            if (configuredDisplay.hasHorizontalMinValue()) configuredDisplay.horizontalMinValue else configuredDisplay.minValue.toDouble(),
+            if (configuredDisplay.hasHorizontalMaxValue()) configuredDisplay.horizontalMaxValue else configuredDisplay.maxValue.toDouble(),
+            configuredDisplay.label.ifBlank { "PID $barPid" }
+        )
+    }
 
     fun setScreen(direction: Int) {
         if (screensAnimating) return
