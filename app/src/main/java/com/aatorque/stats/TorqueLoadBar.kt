@@ -22,7 +22,6 @@ import kotlin.math.roundToInt
 class TorqueLoadBar : Fragment() {
     private lateinit var gauge: EngineLoadBarView
     private lateinit var titleText: TextView
-    private lateinit var valueText: TextView
     private var minimum = 0.0
     private var maximum = 100.0
 
@@ -34,7 +33,6 @@ class TorqueLoadBar : Fragment() {
         val view = inflater.inflate(R.layout.fragment_load_bar, container, false)
         gauge = view.findViewById(R.id.engineLoadGauge)
         titleText = view.findViewById(R.id.loadBarTitle)
-        valueText = view.findViewById(R.id.engineLoadValue)
         return view
     }
 
@@ -45,17 +43,11 @@ class TorqueLoadBar : Fragment() {
         gauge.setRange(minimum.toFloat(), maximum.toFloat())
         gauge.setProgress(data.lastData.toFloat())
         gauge.setPeak(data.maxValue.toFloat())
-        valueText.text = formatReading(data.lastData)
         data.notifyUpdate = {
             val value = it.lastData
             gauge.animateProgress(value.toFloat(), TorqueRefresher.REFRESH_INTERVAL)
             gauge.setPeak(it.maxValue.toFloat())
-            valueText.text = formatReading(value)
         }
-    }
-
-    private fun formatReading(value: Double): String {
-        return if (value.isFinite()) value.roundToInt().toString() else "--"
     }
 }
 
