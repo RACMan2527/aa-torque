@@ -27,7 +27,7 @@
     <com.aatorque.stats.EngineLoadBarView
         android:id="@+id/engineLoadGauge"
         android:layout_width="0dp"
-        android:layout_height="21dp"
+        android:layout_height="23dp"
         android:layout_marginStart="10dp"
         app:layout_constraintStart_toEndOf="@id/loadBarTitle"
         app:layout_constraintEnd_toEndOf="parent"
