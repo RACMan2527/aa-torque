@@ -35,7 +35,10 @@ class FuelTracker(context: Context, private val service: TorqueService) {
         Thread(r, "V-Sport-Fuel-Tracker").apply { isDaemon = true }
     }
     private var task: ScheduledFuture<*>? = null
-    private var state = load()
+    private var state = load().apply {
+        // Pending summaries from an earlier app session must not appear on startup.
+        remove("pending")
+    }
     private var lastSampleMs = 0L
     private var candidate: Double? = null
     private var candidateCount = 0
@@ -202,6 +205,12 @@ class FuelTracker(context: Context, private val service: TorqueService) {
     private var lastPersistMs = 0L
 
     private fun onRefill(after: Double, before: Double) {
+        // A refill without any tracked travel is not a completed driving period.
+        if (state.optDouble("miles") < 1.0) {
+            state.put("lowLevel", after)
+            save()
+            return
+        }
         val id = System.currentTimeMillis()
         val gallons = if (state.optBoolean("fuelRateValid", true) && state.optBoolean("fuelRateSeen", false))
             state.optDouble("gallons") else null
