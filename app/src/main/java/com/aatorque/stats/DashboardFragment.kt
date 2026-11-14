@@ -81,7 +81,9 @@ open class DashboardFragment : AlbumArt() {
         fun dp(value: Int) = (value * density + 0.5f).toInt()
         val overlay = FrameLayout(ctx).apply {
             setBackgroundColor(Color.argb(225, 0, 0, 0))
+            elevation = dp(120).toFloat()
             isClickable = true
+            isFocusable = true
         }
         val panel = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -144,6 +146,7 @@ open class DashboardFragment : AlbumArt() {
             topToTop = ConstraintLayout.LayoutParams.PARENT_ID
             bottomToBottom = ConstraintLayout.LayoutParams.PARENT_ID
         })
+        overlay.bringToFront()
         tankSummaryOverlay = overlay
         ok.requestFocus()
     }
