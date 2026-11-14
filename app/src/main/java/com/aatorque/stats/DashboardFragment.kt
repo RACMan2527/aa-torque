@@ -74,7 +74,7 @@ open class DashboardFragment : AlbumArt() {
         }
     }
 
-    private fun showTankSummary(summary: FuelTracker.Summary) {
+    private fun showTankSummary(summary: FuelTracker.Summary, preview: Boolean = false) {
         if (!isAdded || !isResumed || tankSummaryOverlay != null) return
         val ctx = requireContext()
         val density = resources.displayMetrics.density
@@ -113,7 +113,7 @@ open class DashboardFragment : AlbumArt() {
         }
         val hours = summary.seconds / 3600
         val minutes = (summary.seconds % 3600) / 60
-        row("LAST TANK", "")
+        row(if (preview) "CURRENT TRACKING (PREVIEW)" else "LAST TANK", "")
         row("Tank MPG", summary.mpg?.let { String.format(java.util.Locale.US, "%.1f MPG", it) } ?: "Unavailable", true)
         row("Distance", String.format(java.util.Locale.US, "%.1f mi", summary.miles))
         row("Fuel Consumed", summary.gallons?.let { String.format(java.util.Locale.US, "%.1f gal", it) } ?: "Unavailable")
@@ -131,7 +131,7 @@ open class DashboardFragment : AlbumArt() {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                fuelTracker.acknowledge(summary.id)
+                if (!preview) fuelTracker.acknowledge(summary.id)
                 (overlay.parent as? ViewGroup)?.removeView(overlay)
                 tankSummaryOverlay = null
             }
@@ -171,7 +171,7 @@ open class DashboardFragment : AlbumArt() {
         if (quickPage != "diagnostics") closeQuickControls()
     }
     private val quickMain = listOf("Daily MIN/MAX Reset", "Gauge Sizes", "PID Polling",
-        "Screen Refresh", "Live Diagnostics", "Close Menu")
+        "Screen Refresh", "Live Diagnostics", "Fuel Summary Preview", "Close Menu")
     private val quickReset = listOf("Reset Daily MAX", "Reset Daily MIN", "Reset Both", "Back")
     private val quickSizes = listOf("All Round Gauges", "Center Gauge", "Back")
     private var quickResetSelection = 0
@@ -1275,7 +1275,11 @@ open class DashboardFragment : AlbumArt() {
                 2 -> openQuickSlider(true)
                 3 -> openQuickSlider(false)
                 4 -> openQuickControls("diagnostics")
-                5 -> closeQuickControls()
+                5 -> {
+                    closeQuickControls()
+                    showTankSummary(fuelTracker.previewSummary(), preview = true)
+                }
+                6 -> closeQuickControls()
                 else -> closeQuickControls()
             }
             "reset" -> if (quickIndex == 3) openQuickControls()
