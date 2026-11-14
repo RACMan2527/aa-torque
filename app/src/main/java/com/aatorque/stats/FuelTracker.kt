@@ -142,6 +142,15 @@ class FuelTracker(context: Context, private val service: TorqueService) {
         summaryFromJson(obj).also { latest = it }
     }
 
+    // Manual preview uses current accumulated data; never alters tank history or pending state.
+    @Synchronized fun previewSummary(): Summary {
+        val gallons = if (state.optBoolean("fuelRateValid", true) &&
+            state.optBoolean("fuelRateSeen", false)) state.optDouble("gallons") else null
+        val miles = state.optDouble("miles")
+        return Summary(-1L, miles, gallons, state.optLong("seconds"),
+            gallons?.takeIf { it > 0.0 }?.let { miles / it })
+    }
+
     @Synchronized fun acknowledge(id: Long) {
         if (state.optJSONObject("pending")?.optLong("id") == id) {
             state.remove("pending")
