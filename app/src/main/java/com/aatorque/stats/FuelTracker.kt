@@ -164,8 +164,22 @@ class FuelTracker(context: Context, private val service: TorqueService) {
 
     @Synchronized private fun sample() {
         val now = SystemClock.elapsedRealtime()
-        val ts = service.torqueService ?: run { lastSampleMs = 0L; return }
-        if (!ts.isConnectedToECU) { lastSampleMs = 0L; return }
+        val ts = service.torqueService ?: run {
+            lastSampleMs = 0L
+            stoppedLevel = null
+            restartValidation = false
+            runningSeen = false
+            zeroRpmCount = 0
+            return
+        }
+        if (!ts.isConnectedToECU) {
+            lastSampleMs = 0L
+            stoppedLevel = null
+            restartValidation = false
+            runningSeen = false
+            zeroRpmCount = 0
+            return
+        }
         val level = read(ts, "2f,0")?.takeIf { it <= 100.0 }
             ?: run { lastSampleMs = 0L; return }
         val speed = read(ts, "0d,0")?.takeIf { it <= 250.0 }
