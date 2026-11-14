@@ -42,7 +42,12 @@ class FuelTracker(context: Context, private val service: TorqueService) {
     private var lastSampleMs = 0L
     private var candidate: Double? = null
     private var candidateCount = 0
-    private var previousLevel: Double? = null
+    private var runningLevel: Double? = null
+    private var runningSeen = false
+    private var zeroRpmCount = 0
+    private var stoppedLevel: Double? = null
+    private var restartValidation = false
+    private var restartSamples = 0
     @Volatile private var latest: Summary? = null
 
     private fun load(): JSONObject = try {
@@ -119,6 +124,12 @@ class FuelTracker(context: Context, private val service: TorqueService) {
         lastSampleMs = 0L
         candidate = null
         candidateCount = 0
+        zeroRpmCount = 0
+        restartValidation = false
+        restartSamples = 0
+        runningSeen = false
+        runningLevel = null
+        stoppedLevel = null
     }
 
     @Synchronized fun close() {
@@ -159,6 +170,7 @@ class FuelTracker(context: Context, private val service: TorqueService) {
             ?: run { lastSampleMs = 0L; return }
         val speed = read(ts, "0d,0")?.takeIf { it <= 250.0 }
         val rate = read(ts, "5e,0")?.takeIf { it <= 400.0 }
+        val rpm = read(ts, "0c,0")?.takeIf { it <= 8000.0 }
         val delta = if (lastSampleMs == 0L) 0.0
             else ((now - lastSampleMs) / 1000.0).coerceIn(0.0, 4.0)
         lastSampleMs = now
@@ -173,27 +185,68 @@ class FuelTracker(context: Context, private val service: TorqueService) {
             } else state.put("fuelRateValid", false)
         }
 
-        // The low-water reference is durable across ignition and app restarts.
-        // Reject transient increases: at least 12 percentage points, five
-        // consecutive stable samples, and vehicle stationary.
-        val low = state.optDouble("lowLevel", level).coerceIn(0.0, 100.0)
-        if (!state.has("lowLevel") || level < low - 1.0) {
-            state.put("lowLevel", level)
-            candidate = null
-            candidateCount = 0
-        } else if (level >= low + 12.0 && speed != null && speed < 1.0) {
-            if (candidate == null || abs(level - candidate!!) > 3.0) {
-                candidate = level
-                candidateCount = 1
-            } else candidateCount++
-            if (candidateCount >= 5) {
-                onRefill(level, low)
+        // A stationary running engine never qualifies as a refuel.
+        // Only three confirmed zero-RPM samples after running, followed by
+        // an actual running restart, can arm the short validation window.
+        if (rpm != null && rpm > 300.0) {
+            if (stoppedLevel != null && !restartValidation) {
+                restartValidation = true
+                restartSamples = 0
                 candidate = null
                 candidateCount = 0
+                DiagnosticLog.event("FUEL_REFILL_RESTART", "preStop=$stoppedLevel")
             }
-        } else {
-            candidate = null
-            candidateCount = 0
+            zeroRpmCount = 0
+            runningSeen = true
+            if (!restartValidation) runningLevel = level
+            if (restartValidation) {
+                // Cancel on movement: later stoplights cannot validate a refill.
+                if (speed == null || speed >= 1.0) {
+                    DiagnosticLog.event("FUEL_REFILL_REJECTED", "reason=restart_moving")
+                    restartValidation = false
+                    stoppedLevel = null
+                    candidate = null
+                    candidateCount = 0
+                    runningLevel = level
+                } else {
+                    restartSamples++
+                    val baseline = stoppedLevel!!
+                    if (level >= baseline + 12.0) {
+                        if (candidate == null || abs(level - candidate!!) > 3.0) {
+                            candidate = level
+                            candidateCount = 1
+                        } else candidateCount++
+                        if (candidateCount >= 5) {
+                            DiagnosticLog.event("FUEL_REFILL_ACCEPTED", "before=$baseline after=$level")
+                            onRefill(level, baseline)
+                            restartValidation = false
+                            stoppedLevel = null
+                            candidate = null
+                            candidateCount = 0
+                            runningLevel = level
+                        }
+                    } else {
+                        candidate = null
+                        candidateCount = 0
+                    }
+                    if (restartSamples >= 15 && restartValidation) {
+                        DiagnosticLog.event("FUEL_REFILL_REJECTED", "reason=restart_window_expired")
+                        restartValidation = false
+                        stoppedLevel = null
+                        candidate = null
+                        candidateCount = 0
+                        runningLevel = level
+                    }
+                }
+            }
+        } else if (rpm != null && rpm == 0.0 && runningSeen && !restartValidation) {
+            zeroRpmCount++
+            if (zeroRpmCount >= 3 && stoppedLevel == null && runningLevel != null) {
+                stoppedLevel = runningLevel
+                DiagnosticLog.event("FUEL_REFILL_ENGINE_STOP", "level=$stoppedLevel")
+            }
+        } else if (rpm != null && rpm > 0.0) {
+            zeroRpmCount = 0
         }
         // Avoid a write on every 2s poll; save approximately every 30 seconds.
         if (now - lastPersistMs > 30_000L) {
